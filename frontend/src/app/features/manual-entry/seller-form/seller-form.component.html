@@ -1,0 +1,27 @@
+<div [formGroup]="parentForm" class="field-grid">
+  <mat-form-field appearance="outline">
+    <mat-label>Seller NTN / CNIC</mat-label>
+    <input matInput formControlName="sellerNTNCNIC" placeholder="e.g. 2701129">
+    <mat-error *ngIf="parentForm.get('sellerNTNCNIC')?.hasError('required')">Required</mat-error>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Seller Business Name</mat-label>
+    <input matInput formControlName="sellerBusinessName">
+    <mat-error *ngIf="parentForm.get('sellerBusinessName')?.hasError('required')">Required</mat-error>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Province</mat-label>
+    <mat-select formControlName="sellerProvince">
+      <mat-option *ngFor="let p of provinces" [value]="p">{{ p }}</mat-option>
+    </mat-select>
+    <mat-error *ngIf="parentForm.get('sellerProvince')?.hasError('required')">Required</mat-error>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label>Seller Address</mat-label>
+    <textarea matInput formControlName="sellerAddress" rows="2"></textarea>
+    <mat-error *ngIf="parentForm.get('sellerAddress')?.hasError('required')">Required</mat-error>
+  </mat-form-field>
+</div>

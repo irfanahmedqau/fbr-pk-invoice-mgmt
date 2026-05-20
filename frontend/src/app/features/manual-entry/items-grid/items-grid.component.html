@@ -1,0 +1,60 @@
+<div *ngIf="items.length === 0" class="empty-state">
+  <mat-icon>inbox</mat-icon>
+  <p>No items added yet. Use the form above to add invoice line items.</p>
+</div>
+
+<mat-table [dataSource]="dataSource" *ngIf="items.length > 0" class="items-table">
+
+  <ng-container matColumnDef="hsCode">
+    <mat-header-cell *matHeaderCellDef>HS Code</mat-header-cell>
+    <mat-cell *matCellDef="let row">{{ row.hsCode }}</mat-cell>
+  </ng-container>
+
+  <ng-container matColumnDef="productDescription">
+    <mat-header-cell *matHeaderCellDef>Description</mat-header-cell>
+    <mat-cell *matCellDef="let row">{{ row.productDescription || '—' }}</mat-cell>
+  </ng-container>
+
+  <ng-container matColumnDef="rate">
+    <mat-header-cell *matHeaderCellDef>Rate</mat-header-cell>
+    <mat-cell *matCellDef="let row">{{ row.rate }}</mat-cell>
+  </ng-container>
+
+  <ng-container matColumnDef="uoM">
+    <mat-header-cell *matHeaderCellDef>UOM</mat-header-cell>
+    <mat-cell *matCellDef="let row">{{ row.uoM }}</mat-cell>
+  </ng-container>
+
+  <ng-container matColumnDef="quantity">
+    <mat-header-cell *matHeaderCellDef>Qty</mat-header-cell>
+    <mat-cell *matCellDef="let row">{{ row.quantity | number }}</mat-cell>
+  </ng-container>
+
+  <ng-container matColumnDef="totalValues">
+    <mat-header-cell *matHeaderCellDef>Total Value</mat-header-cell>
+    <mat-cell *matCellDef="let row">{{ row.totalValues | number:'1.0-0' }}</mat-cell>
+  </ng-container>
+
+  <ng-container matColumnDef="salesTaxApplicable">
+    <mat-header-cell *matHeaderCellDef>Sales Tax</mat-header-cell>
+    <mat-cell *matCellDef="let row">{{ row.salesTaxApplicable | number:'1.0-0' }}</mat-cell>
+  </ng-container>
+
+  <ng-container matColumnDef="saleType">
+    <mat-header-cell *matHeaderCellDef>Sale Type</mat-header-cell>
+    <mat-cell *matCellDef="let row">{{ row.saleType }}</mat-cell>
+  </ng-container>
+
+  <ng-container matColumnDef="actions">
+    <mat-header-cell *matHeaderCellDef>Remove</mat-header-cell>
+    <mat-cell *matCellDef="let row">
+      <button mat-icon-button color="warn" (click)="onRemove(row._index)" title="Remove item">
+        <mat-icon>delete</mat-icon>
+      </button>
+    </mat-cell>
+  </ng-container>
+
+  <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+  <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+
+</mat-table>

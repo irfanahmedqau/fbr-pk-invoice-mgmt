@@ -1,0 +1,72 @@
+.fbr-validation-panel {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.validation-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: #f5f5f5;
+}
+
+.success-row { background: #e8f5e9; color: #2e7d32; }
+.warn-row    { background: #fff3e0; color: #e65100; }
+.error-row   { background: #fce4ec; color: #c62828; }
+
+.row-icon { font-size: 18px; height: 18px; width: 18px; }
+.hint-text { flex: 1; line-height: 1.4; }
+
+.reg-type-value {
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* Lock / verified suffix icons */
+.lock-icon {
+  color: #bdbdbd;
+  font-size: 18px;
+}
+
+.verified-icon {
+  color: #2e7d32;
+  font-size: 18px;
+}
+
+/* Override Material hint colour when verified */
+.verified-hint {
+  color: #2e7d32 !important;
+  font-weight: 500;
+}
+
+/* Mini spinner */
+.spinner-small {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #ccc;
+  border-top-color: #1976d2;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }

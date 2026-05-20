@@ -1,0 +1,101 @@
+<div class="excel-upload-container">
+
+  <!-- Step 1: File selection -->
+  <mat-card class="upload-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar>table_chart</mat-icon>
+      <mat-card-title>Bulk Invoice Upload — Excel</mat-card-title>
+      <mat-card-subtitle>Select an .xlsx file, choose the sheet, then submit all invoices to FBR.</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="file-row">
+        <button mat-stroked-button color="primary" (click)="fileInput.click()" [disabled]="uploading">
+          <mat-icon>attach_file</mat-icon>
+          {{ selectedFile ? 'Change File' : 'Select Excel File' }}
+        </button>
+        <span class="file-name" *ngIf="selectedFile">{{ selectedFile.name }}</span>
+        <input #fileInput type="file" accept=".xlsx,.xls" (change)="onFileSelected($event)" style="display:none">
+      </div>
+
+      <mat-progress-bar *ngIf="loadingSheets" mode="indeterminate" style="margin-top:12px"></mat-progress-bar>
+
+      <!-- Sheet selector -->
+      <mat-form-field appearance="outline" *ngIf="sheetNames.length > 0" style="margin-top:16px; width:100%">
+        <mat-label>Select Sheet</mat-label>
+        <mat-select [(value)]="selectedSheetIndex">
+          <mat-option *ngFor="let name of sheetNames; let i = index" [value]="i">
+            {{ i + 1 }}. {{ name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </mat-card-content>
+
+    <mat-card-actions>
+      <button mat-raised-button color="primary"
+              [disabled]="!selectedFile || loadingSheets || uploading"
+              (click)="upload()">
+        <mat-icon>cloud_upload</mat-icon>
+        {{ uploading ? 'Submitting to FBR…' : 'Submit All to FBR' }}
+      </button>
+      <button mat-stroked-button (click)="reset()" [disabled]="uploading">
+        <mat-icon>refresh</mat-icon> Reset
+      </button>
+    </mat-card-actions>
+
+    <mat-progress-bar *ngIf="uploading" mode="indeterminate"></mat-progress-bar>
+  </mat-card>
+
+  <!-- Results -->
+  <mat-card class="results-card" *ngIf="result">
+    <mat-card-header>
+      <mat-card-title>Upload Results</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+
+      <!-- Summary chips -->
+      <div class="summary-row">
+        <span class="chip total">Total: {{ result.totalRows }}</span>
+        <span class="chip success">&#10003; Submitted: {{ result.successCount }}</span>
+        <span class="chip failed" *ngIf="result.failedCount > 0">&#x2717; Failed: {{ result.failedCount }}</span>
+      </div>
+
+      <mat-divider style="margin: 12px 0"></mat-divider>
+
+      <!-- Results table -->
+      <mat-table [dataSource]="result.results" class="results-table">
+
+        <ng-container matColumnDef="rowNumber">
+          <mat-header-cell *matHeaderCellDef>Row</mat-header-cell>
+          <mat-cell *matCellDef="let row">{{ row.rowNumber }}</mat-cell>
+        </ng-container>
+
+        <ng-container matColumnDef="invoiceRefNo">
+          <mat-header-cell *matHeaderCellDef>Invoice Ref No</mat-header-cell>
+          <mat-cell *matCellDef="let row">{{ row.invoiceRefNo }}</mat-cell>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <mat-header-cell *matHeaderCellDef>Status</mat-header-cell>
+          <mat-cell *matCellDef="let row">
+            <span [class]="statusClass(row)" class="status-badge">
+              <mat-icon>{{ row.status === 'SUCCESS' ? 'check_circle' : 'cancel' }}</mat-icon>
+              {{ row.status }}
+            </span>
+          </mat-cell>
+        </ng-container>
+
+        <ng-container matColumnDef="message">
+          <mat-header-cell *matHeaderCellDef>Message</mat-header-cell>
+          <mat-cell *matCellDef="let row">{{ row.message }}</mat-cell>
+        </ng-container>
+
+        <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+        <mat-row *matRowDef="let row; columns: displayedColumns;"
+                 [class.row-failed]="row.status === 'FAILED'"></mat-row>
+
+      </mat-table>
+    </mat-card-content>
+  </mat-card>
+
+</div>

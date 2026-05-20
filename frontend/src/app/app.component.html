@@ -1,0 +1,27 @@
+<mat-toolbar color="primary" class="app-toolbar">
+  <mat-icon style="margin-right:10px">receipt_long</mat-icon>
+  <span>FBR Invoice Channeling System</span>
+  <span class="spacer"></span>
+  <span class="env-badge">Sandbox</span>
+</mat-toolbar>
+
+<nav mat-tab-nav-bar [tabPanel]="tabPanel" color="accent" class="main-tabs">
+  <a mat-tab-link routerLink="/manual-entry" routerLinkActive #manualActive="routerLinkActive"
+     [active]="manualActive.isActive">
+    <mat-icon>edit_note</mat-icon>&nbsp; Manual Invoice Entry
+  </a>
+  <a mat-tab-link routerLink="/excel-upload" routerLinkActive #excelActive="routerLinkActive"
+     [active]="excelActive.isActive">
+    <mat-icon>table_chart</mat-icon>&nbsp; Bulk Excel Upload
+  </a>
+  <a mat-tab-link routerLink="/invoice-status" routerLinkActive #statusActive="routerLinkActive"
+     [active]="statusActive.isActive">
+    <mat-icon>fact_check</mat-icon>&nbsp; Invoice Status Board
+  </a>
+</nav>
+
+<mat-tab-nav-panel #tabPanel>
+  <div class="page-content">
+    <router-outlet></router-outlet>
+  </div>
+</mat-tab-nav-panel>

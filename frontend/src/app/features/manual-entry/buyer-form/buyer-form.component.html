@@ -1,0 +1,104 @@
+<div [formGroup]="parentForm" class="field-grid">
+
+  <!-- NTN / CNIC -->
+  <mat-form-field appearance="outline">
+    <mat-label>Buyer NTN / CNIC</mat-label>
+    <input matInput formControlName="buyerNTNCNIC" placeholder="e.g. 1309515">
+    <mat-hint *ngIf="validatingAtl">Checking FBR ATL…</mat-hint>
+    <mat-error *ngIf="parentForm.get('buyerNTNCNIC')?.hasError('required')">Required</mat-error>
+  </mat-form-field>
+
+  <!-- Business name -->
+  <mat-form-field appearance="outline">
+    <mat-label>Buyer Business Name</mat-label>
+    <input matInput formControlName="buyerBusinessName">
+    <mat-error *ngIf="parentForm.get('buyerBusinessName')?.hasError('required')">Required</mat-error>
+  </mat-form-field>
+
+  <!-- Province -->
+  <mat-form-field appearance="outline">
+    <mat-label>Province</mat-label>
+    <mat-select formControlName="buyerProvince">
+      <mat-option *ngFor="let p of provinces" [value]="p">{{ p }}</mat-option>
+    </mat-select>
+    <mat-error *ngIf="parentForm.get('buyerProvince')?.hasError('required')">Required</mat-error>
+  </mat-form-field>
+
+  <!-- Registration Type — read-only, set by FBR API -->
+  <mat-form-field appearance="outline" class="reg-type-field">
+    <mat-label>Registration Type</mat-label>
+    <input matInput
+           formControlName="buyerRegistrationType"
+           placeholder="Auto-set by FBR verification"
+           readonly>
+
+    <!-- Lock icon when empty / verifying -->
+    <mat-icon matSuffix class="lock-icon"
+              *ngIf="!regTypeResult">lock</mat-icon>
+
+    <!-- Verified icon when set by FBR -->
+    <mat-icon matSuffix class="verified-icon"
+              *ngIf="regTypeResult && regTypeResult.registrationType">
+      verified_user
+    </mat-icon>
+
+    <mat-hint *ngIf="!regTypeResult && !validatingRegType">
+      Enter buyer NTN above to auto-verify
+    </mat-hint>
+    <mat-hint *ngIf="validatingRegType">Fetching from FBR…</mat-hint>
+    <mat-hint *ngIf="regTypeResult" class="verified-hint">
+      ✓ Set by FBR API
+    </mat-hint>
+  </mat-form-field>
+
+  <!-- Address -->
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label>Buyer Address</mat-label>
+    <textarea matInput formControlName="buyerAddress" rows="2"></textarea>
+    <mat-error *ngIf="parentForm.get('buyerAddress')?.hasError('required')">Required</mat-error>
+  </mat-form-field>
+
+  <!-- ── FBR Verification Results ── -->
+  <div class="fbr-validation-panel full-width"
+       *ngIf="atlResult || atlError || validatingAtl || validatingRegType">
+
+    <div class="panel-title">
+      <mat-icon>shield</mat-icon> FBR Verification
+    </div>
+
+    <div class="validation-row" *ngIf="validatingAtl">
+      <span class="spinner-small"></span>
+      <span class="hint-text">Checking Sales Tax Active Taxpayer List…</span>
+    </div>
+
+    <div class="validation-row error-row" *ngIf="atlError && !validatingAtl">
+      <mat-icon class="row-icon">error_outline</mat-icon>
+      <span class="hint-text">{{ atlError }}</span>
+    </div>
+
+    <div class="validation-row" *ngIf="atlResult && !validatingAtl"
+         [ngClass]="atlResult.isActive ? 'success-row' : 'warn-row'">
+      <mat-icon class="row-icon">{{ atlResult.isActive ? 'verified' : 'gpp_bad' }}</mat-icon>
+      <span class="hint-text">
+        <strong>ATL:</strong> {{ atlResult.label }}
+      </span>
+    </div>
+
+    <div class="validation-row" *ngIf="validatingRegType">
+      <span class="spinner-small"></span>
+      <span class="hint-text">Fetching registration type from FBR…</span>
+    </div>
+
+    <div class="validation-row success-row"
+         *ngIf="regTypeResult && !validatingRegType && atlResult?.isActive">
+      <mat-icon class="row-icon">badge</mat-icon>
+      <span class="hint-text">
+        <strong>Registration Type:</strong>
+        <span class="reg-type-value">{{ regTypeResult.label }}</span>
+        — field auto-populated and locked
+      </span>
+    </div>
+
+  </div>
+
+</div>

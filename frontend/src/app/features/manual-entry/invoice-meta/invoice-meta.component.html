@@ -1,0 +1,30 @@
+<div [formGroup]="parentForm" class="field-grid">
+
+  <mat-form-field appearance="outline">
+    <mat-label>Invoice Type</mat-label>
+    <input matInput formControlName="invoiceType" readonly>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Invoice Date</mat-label>
+    <input matInput [matDatepicker]="picker" formControlName="invoiceDate" [max]="maxDate">
+    <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+    <mat-datepicker #picker></mat-datepicker>
+    <mat-error *ngIf="parentForm.get('invoiceDate')?.hasError('required')">Required</mat-error>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Invoice Ref No</mat-label>
+    <input matInput formControlName="invoiceRefNo" placeholder="e.g. C260701">
+    <mat-error *ngIf="parentForm.get('invoiceRefNo')?.hasError('required')">Required</mat-error>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Scenario ID</mat-label>
+    <mat-select formControlName="scenarioId">
+      <mat-option *ngFor="let s of scenarios" [value]="s.id">{{ s.label }}</mat-option>
+    </mat-select>
+    <mat-error *ngIf="parentForm.get('scenarioId')?.hasError('required')">Required</mat-error>
+  </mat-form-field>
+
+</div>

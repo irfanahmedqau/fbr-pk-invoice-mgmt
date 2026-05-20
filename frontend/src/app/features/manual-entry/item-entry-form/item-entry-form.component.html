@@ -1,0 +1,149 @@
+<form [formGroup]="itemForm" class="item-form">
+
+  <!-- ── Row 1: Identity fields ── -->
+  <div class="form-row row-4">
+
+    <mat-form-field appearance="outline">
+      <mat-label>HS Code</mat-label>
+      <input matInput
+             formControlName="hsCode"
+             placeholder="Type code or keyword…"
+             [matAutocomplete]="hsAuto">
+      <mat-hint *ngIf="hsCodesLoading">Loading…</mat-hint>
+      <mat-error *ngIf="itemForm.get('hsCode')?.hasError('required')">Required</mat-error>
+      <mat-autocomplete #hsAuto="matAutocomplete"
+                        [displayWith]="displayHsCode"
+                        (optionSelected)="onHsCodeSelected($event)">
+        <mat-option *ngFor="let code of filteredHsCodes" [value]="code" class="hs-option">
+          <span class="hs-code-badge">{{ code.hS_CODE }}</span>
+          <span class="hs-desc">{{ code.description | slice:0:90 }}…</span>
+        </mat-option>
+        <mat-option *ngIf="filteredHsCodes.length === 0 &&
+                           itemForm.get('hsCode')?.value?.length >= 2 &&
+                           !hsCodesLoading" disabled>
+          No matching HS codes
+        </mat-option>
+      </mat-autocomplete>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Rate</mat-label>
+      <input matInput formControlName="rate" placeholder="18% / Exempt / 0%">
+      <mat-error *ngIf="itemForm.get('rate')?.hasError('required')">Required</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>UOM</mat-label>
+      <mat-select formControlName="uoM">
+        <mat-option *ngFor="let u of uomOptions" [value]="u">{{ u }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Quantity</mat-label>
+      <input matInput type="number" formControlName="quantity">
+      <mat-error *ngIf="itemForm.get('quantity')?.hasError('min')">Must be &gt; 0</mat-error>
+    </mat-form-field>
+
+  </div>
+
+  <!-- ── Row 2: Product Description — full width ── -->
+  <mat-form-field appearance="outline" class="field-full">
+    <mat-label>Product Description</mat-label>
+    <textarea matInput
+              formControlName="productDescription"
+              rows="3"
+              placeholder="Auto-filled when HS code is selected, or enter manually">
+    </textarea>
+  </mat-form-field>
+
+  <!-- ── Section: Financial Values ── -->
+  <div class="section-label">
+    <mat-icon>attach_money</mat-icon> Financial Values
+  </div>
+
+  <div class="form-row row-4">
+
+    <mat-form-field appearance="outline">
+      <mat-label>Total Values</mat-label>
+      <input matInput type="number" formControlName="totalValues">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Value Sales Excl. ST</mat-label>
+      <input matInput type="number" formControlName="valueSalesExcludingST">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Fixed / Notified Value</mat-label>
+      <input matInput type="number" formControlName="fixedNotifiedValueOrRetailPrice">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Sales Tax Applicable</mat-label>
+      <input matInput type="number" formControlName="salesTaxApplicable">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Sales Tax Withheld</mat-label>
+      <input matInput type="number" formControlName="salesTaxWithheldAtSource">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Further Tax</mat-label>
+      <input matInput type="number" formControlName="furtherTax">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Fed Payable</mat-label>
+      <input matInput type="number" formControlName="fedPayable">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Discount</mat-label>
+      <input matInput type="number" formControlName="discount">
+    </mat-form-field>
+
+  </div>
+
+  <!-- ── Section: Additional Details ── -->
+  <div class="section-label">
+    <mat-icon>info_outline</mat-icon> Additional Details
+  </div>
+
+  <div class="form-row row-3">
+
+    <mat-form-field appearance="outline">
+      <mat-label>Extra Tax</mat-label>
+      <input matInput formControlName="extraTax">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>SRO Schedule No</mat-label>
+      <input matInput formControlName="sroScheduleNo">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>SRO Item Serial No</mat-label>
+      <input matInput formControlName="sroItemSerialNo">
+    </mat-form-field>
+
+  </div>
+
+  <!-- ── Sale Type — full width ── -->
+  <mat-form-field appearance="outline" class="field-full">
+    <mat-label>Sale Type</mat-label>
+    <mat-select formControlName="saleType">
+      <mat-option *ngFor="let s of saleTypes" [value]="s">{{ s }}</mat-option>
+    </mat-select>
+    <mat-error *ngIf="itemForm.get('saleType')?.hasError('required')">Required</mat-error>
+  </mat-form-field>
+
+  <!-- ── Add button ── -->
+  <div class="add-btn-row">
+    <button mat-raised-button color="primary" type="button" (click)="addItem()">
+      <mat-icon>add_circle_outline</mat-icon> Add Item to Invoice
+    </button>
+  </div>
+
+</form>

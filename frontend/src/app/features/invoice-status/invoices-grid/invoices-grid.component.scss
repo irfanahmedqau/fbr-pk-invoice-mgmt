@@ -1,0 +1,24 @@
+.status-grid-container { max-width: 1400px; margin: 0 auto; }
+
+.spinner-row { display: flex; justify-content: center; padding: 40px; }
+
+.status-table { width: 100%; margin-top: 8px; }
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.chip-icon { font-size: 14px; height: 14px; width: 14px; }
+
+.chip-pending   { background: #f3e5f5; color: #6a1b9a; }
+.chip-validated { background: #e3f2fd; color: #1565c0; }
+.chip-posted    { background: #e8f5e9; color: #2e7d32; }
+.chip-failed    { background: #fce4ec; color: #c62828; }
+
+.row-failed td { background-color: #fff8f8; }

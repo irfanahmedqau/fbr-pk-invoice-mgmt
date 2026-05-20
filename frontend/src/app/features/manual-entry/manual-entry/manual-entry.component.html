@@ -1,0 +1,91 @@
+<div class="manual-entry-container">
+
+  <!-- Mode banner -->
+  <div class="mode-banner" *ngIf="!isNewMode">
+    <mat-icon>{{ isViewOnly ? 'visibility' : 'edit' }}</mat-icon>
+    <span *ngIf="isViewOnly">View-only — Invoice #{{ invoiceId }}</span>
+    <span *ngIf="isEditMode">Edit & Resubmit — Invoice #{{ invoiceId }} (FAILED)</span>
+    <button mat-stroked-button (click)="backToGrid()" style="margin-left:auto">
+      <mat-icon>arrow_back</mat-icon> Back to Status Board
+    </button>
+  </div>
+
+  <div *ngIf="loadingInvoice" style="text-align:center;padding:60px">
+    <mat-spinner diameter="50" style="margin:0 auto"></mat-spinner>
+  </div>
+
+  <form [formGroup]="invoiceForm" *ngIf="!loadingInvoice">
+
+    <div class="form-row">
+      <mat-card class="form-card">
+        <mat-card-header><mat-card-title>Seller Information</mat-card-title></mat-card-header>
+        <mat-card-content>
+          <app-seller-form [parentForm]="invoiceForm"></app-seller-form>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="form-card">
+        <mat-card-header><mat-card-title>Buyer Information</mat-card-title></mat-card-header>
+        <mat-card-content>
+          <app-buyer-form [parentForm]="invoiceForm"></app-buyer-form>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="form-card">
+        <mat-card-header><mat-card-title>Invoice Details</mat-card-title></mat-card-header>
+        <mat-card-content>
+          <app-invoice-meta [parentForm]="invoiceForm"></app-invoice-meta>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Item entry form — hidden in view mode -->
+    <mat-card class="item-card" *ngIf="!isViewOnly">
+      <mat-card-header><mat-card-title>Add Invoice Item</mat-card-title></mat-card-header>
+      <mat-card-content>
+        <app-item-entry-form (itemAdded)="addItem($event)"></app-item-entry-form>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="item-card">
+      <mat-card-header>
+        <mat-card-title>Invoice Items ({{ items.length }})</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <app-items-grid [items]="items" (removeItem)="removeItem($event)"></app-items-grid>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Actions — vary by mode -->
+    <div class="actions" *ngIf="!isViewOnly">
+
+      <!-- New invoice -->
+      <ng-container *ngIf="isNewMode">
+        <button mat-raised-button color="accent" (click)="saveToDb()" [disabled]="saving || uploading">
+          <mat-icon>save</mat-icon> {{ saving ? 'Saving…' : 'Save to DB' }}
+        </button>
+        <button mat-raised-button color="primary" (click)="submitToFbr()" [disabled]="saving || uploading">
+          <mat-icon>cloud_upload</mat-icon> {{ uploading ? 'Submitting…' : 'Submit to FBR' }}
+        </button>
+        <button mat-stroked-button (click)="resetForm()" [disabled]="saving || uploading">
+          <mat-icon>refresh</mat-icon> Reset
+        </button>
+      </ng-container>
+
+      <!-- Resubmit FAILED -->
+      <ng-container *ngIf="isEditMode">
+        <button mat-raised-button color="warn" (click)="resubmitToFbr()" [disabled]="uploading">
+          <mat-icon>replay</mat-icon> {{ uploading ? 'Resubmitting…' : 'Resubmit to FBR' }}
+        </button>
+        <button mat-stroked-button (click)="backToGrid()" [disabled]="uploading">
+          <mat-icon>close</mat-icon> Cancel
+        </button>
+      </ng-container>
+
+      <span *ngIf="uploadDone" class="success-badge">
+        <mat-icon color="primary">check_circle</mat-icon> VALIDATED by FBR
+      </span>
+    </div>
+
+  </form>
+</div>
