@@ -9,6 +9,7 @@ public class FbrProperties {
 
     private String token;
     private String validateUrl;
+    private String postUrl;
     private String provincesUrl;
     private String uomUrl;
     private String transactionTypeUrl;
@@ -22,6 +23,9 @@ public class FbrProperties {
 
     public String getValidateUrl() { return validateUrl; }
     public void setValidateUrl(String validateUrl) { this.validateUrl = validateUrl; }
+
+    public String getPostUrl() { return postUrl; }
+    public void setPostUrl(String postUrl) { this.postUrl = postUrl; }
 
     public String getProvincesUrl() { return provincesUrl; }
     public void setProvincesUrl(String provincesUrl) { this.provincesUrl = provincesUrl; }

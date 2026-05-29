@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fbr.invoice.upload.dto.*;
 import com.fbr.invoice.upload.entity.FbrInvoiceRequest;
 import com.fbr.invoice.upload.service.InvoiceService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +18,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/invoices")
 public class InvoiceController {
+
+    private static final Logger log = LoggerFactory.getLogger(InvoiceController.class);
 
     @Autowired
     private InvoiceService invoiceService;
@@ -73,7 +77,26 @@ public class InvoiceController {
     public ResponseEntity<BulkUploadResult> uploadExcel(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "sheetIndex", defaultValue = "0") int sheetIndex) throws IOException {
-        return ResponseEntity.ok(invoiceService.processExcelUpload(file, sheetIndex));
+        log.info("Excel upload request received — file: {}, size: {} bytes, sheetIndex: {}",
+                file.getOriginalFilename(), file.getSize(), sheetIndex);
+        BulkUploadResult result = invoiceService.processExcelUpload(file, sheetIndex);
+        log.info("Excel upload complete — total: {}, success: {}, failed: {}, skipped: {}",
+                result.getTotalRows(), result.getSuccessCount(), result.getFailedCount(), result.getSkippedCount());
+        return ResponseEntity.ok(result);
+    }
+
+    // ------------------------------------------------------------------
+    // Post VALIDATED invoices to FBR → POSTED
+    // ------------------------------------------------------------------
+
+    @PostMapping("/post-validated")
+    public ResponseEntity<BulkPostResult> postValidatedInvoices() {
+        return ResponseEntity.ok(invoiceService.postValidatedInvoices());
+    }
+
+    @PostMapping("/{id}/post")
+    public ResponseEntity<Object> postInvoiceById(@PathVariable Long id) {
+        return ResponseEntity.ok(invoiceService.postInvoiceById(id));
     }
 
     // ------------------------------------------------------------------

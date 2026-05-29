@@ -35,6 +35,17 @@ public class FbrApiService {
         }
     }
 
+    public Object postInvoice(FbrInvoicePayload payload) {
+        HttpEntity<FbrInvoicePayload> entity = new HttpEntity<>(payload, postBearerHeaders());
+        try {
+            ResponseEntity<Object> response = restTemplate.postForEntity(
+                    props.getPostUrl(), entity, Object.class);
+            return response.getBody();
+        } catch (HttpClientErrorException ex) {
+            throw new RuntimeException("FBR post error: " + ex.getResponseBodyAsString(), ex);
+        }
+    }
+
     // ------------------------------------------------------------------
     // Reference / lookup endpoints (cached by caller if needed)
     // ------------------------------------------------------------------

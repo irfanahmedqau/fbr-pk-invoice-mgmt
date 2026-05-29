@@ -9,9 +9,11 @@ import java.util.Optional;
 
 public interface FbrInvoiceRequestRepository extends JpaRepository<FbrInvoiceRequest, Long> {
 
-    Optional<FbrInvoiceRequest> findByInvoiceRefNo(String invoiceRefNo);
+    Optional<FbrInvoiceRequest> findFirstByInvoiceRefNoOrderByIdDesc(String invoiceRefNo);
 
     boolean existsByInvoiceRefNoAndStatus(String invoiceRefNo, InvoiceStatus status);
 
     List<FbrInvoiceRequest> findAllByOrderByProcessedAtDesc();
+
+    List<FbrInvoiceRequest> findByStatus(InvoiceStatus status);
 }

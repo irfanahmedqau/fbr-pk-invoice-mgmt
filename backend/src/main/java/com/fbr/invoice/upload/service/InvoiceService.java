@@ -6,9 +6,11 @@ import com.fbr.invoice.upload.entity.FbrInvoiceRequest;
 import com.fbr.invoice.upload.entity.FbrItem;
 import com.fbr.invoice.upload.entity.InvoiceStatus;
 import com.fbr.invoice.upload.repository.FbrInvoiceRequestRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -20,6 +22,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class InvoiceService {
+
+    private static final Logger log = LoggerFactory.getLogger(InvoiceService.class);
 
     @Autowired private FbrInvoiceRequestRepository invoiceRepo;
     @Autowired private FbrApiService fbrApiService;
@@ -170,6 +174,83 @@ public class InvoiceService {
     }
 
     // ------------------------------------------------------------------
+    // Post all VALIDATED invoices to FBR → POSTED
+    // ------------------------------------------------------------------
+
+    public BulkPostResult postValidatedInvoices() {
+        List<FbrInvoiceRequest> validated = invoiceRepo.findByStatus(InvoiceStatus.VALIDATED);
+        List<ExcelRowResult> results = new ArrayList<>();
+        int posted = 0, failed = 0;
+
+        for (FbrInvoiceRequest invoice : validated) {
+            ExcelRowResult result = new ExcelRowResult();
+            result.setInvoiceRefNo(invoice.getInvoiceRefNo());
+
+            try {
+                Object fbrResponse = fbrApiService.postInvoice(entityToPayload(invoice));
+                String statusCode = extractStatusCode(fbrResponse);
+
+                if ("00".equals(statusCode)) {
+                    invoice.setStatus(InvoiceStatus.POSTED);
+                    result.setStatus("POSTED");
+                    result.setMessage("Posted to FBR successfully");
+                    posted++;
+                } else {
+                    invoice.setStatus(InvoiceStatus.FAILED);
+                    result.setStatus("FAILED");
+                    result.setMessage("FBR post failed — statusCode: " + statusCode);
+                    failed++;
+                }
+                invoice.setValidationResponse(objectMapper.writeValueAsString(fbrResponse));
+                result.setFbrResponse(fbrResponse);
+            } catch (Exception ex) {
+                invoice.setStatus(InvoiceStatus.FAILED);
+                invoice.setValidationResponse(ex.getMessage());
+                result.setStatus("FAILED");
+                result.setMessage(ex.getMessage());
+                failed++;
+            }
+
+            invoice.setProcessedAt(LocalDateTime.now());
+            invoiceRepo.save(invoice);
+            results.add(result);
+        }
+
+        return new BulkPostResult(validated.size(), posted, failed, results);
+    }
+
+    // ------------------------------------------------------------------
+    // Post a single VALIDATED invoice to FBR → POSTED
+    // ------------------------------------------------------------------
+
+    public Object postInvoiceById(Long id) {
+        FbrInvoiceRequest invoice = invoiceRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Invoice not found: " + id));
+
+        if (invoice.getStatus() != InvoiceStatus.VALIDATED) {
+            throw new RuntimeException(
+                "Only VALIDATED invoices can be posted. Current status: " + invoice.getStatus());
+        }
+
+        try {
+            Object fbrResponse = fbrApiService.postInvoice(entityToPayload(invoice));
+            String statusCode = extractStatusCode(fbrResponse);
+
+            invoice.setStatus("00".equals(statusCode) ? InvoiceStatus.POSTED : InvoiceStatus.FAILED);
+            invoice.setValidationResponse(toJson(fbrResponse));
+            invoice.setProcessedAt(LocalDateTime.now());
+            invoiceRepo.save(invoice);
+            return fbrResponse;
+        } catch (Exception ex) {
+            invoice.setStatus(InvoiceStatus.FAILED);
+            invoice.setValidationResponse(ex.getMessage());
+            invoice.setProcessedAt(LocalDateTime.now());
+            invoiceRepo.save(invoice);
+            throw new RuntimeException(ex.getMessage(), ex);
+        }
+    }
+
+    // ------------------------------------------------------------------
     // Internal helpers
     // ------------------------------------------------------------------
 
@@ -200,7 +281,7 @@ public class InvoiceService {
     }
 
     private FbrInvoiceRequest findOrCreate(String invoiceRefNo) {
-        return invoiceRepo.findByInvoiceRefNo(invoiceRefNo)
+        return invoiceRepo.findFirstByInvoiceRefNoOrderByIdDesc(invoiceRefNo)
                 .orElse(new FbrInvoiceRequest());
     }
 
@@ -354,6 +435,48 @@ public class InvoiceService {
             }
         } catch (Exception ignored) {}
         return "UNKNOWN";
+    }
+
+    private FbrInvoicePayload entityToPayload(FbrInvoiceRequest invoice) {
+        FbrInvoicePayload payload = new FbrInvoicePayload();
+        payload.setInvoiceType(invoice.getInvoiceType());
+        payload.setInvoiceDate(invoice.getInvoiceDate() != null ? invoice.getInvoiceDate().toString() : null);
+        payload.setSellerNTNCNIC(invoice.getSellerNTNCNIC());
+        payload.setSellerBusinessName(invoice.getSellerBusinessName());
+        payload.setSellerProvince(invoice.getSellerProvince());
+        payload.setSellerAddress(invoice.getSellerAddress());
+        payload.setBuyerNTNCNIC(invoice.getBuyerNTNCNIC());
+        payload.setBuyerBusinessName(invoice.getBuyerBusinessName());
+        payload.setBuyerProvince(invoice.getBuyerProvince());
+        payload.setBuyerAddress(invoice.getBuyerAddress());
+        payload.setBuyerRegistrationType(invoice.getBuyerRegistrationType());
+        payload.setInvoiceRefNo(invoice.getInvoiceRefNo());
+        payload.setScenarioId(invoice.getScenarioId());
+
+        List<FbrItemPayload> items = invoice.getItems().stream().map(i -> {
+            FbrItemPayload item = new FbrItemPayload();
+            item.setHsCode(i.getHsCode());
+            item.setProductDescription(i.getProductDescription());
+            item.setRate(i.getRate());
+            item.setUoM(i.getUoM());
+            item.setQuantity(i.getQuantity());
+            item.setTotalValues(i.getTotalValues());
+            item.setValueSalesExcludingST(i.getValueSalesExcludingST());
+            item.setFixedNotifiedValueOrRetailPrice(i.getFixedNotifiedValueOrRetailPrice());
+            item.setSalesTaxApplicable(i.getSalesTaxApplicable());
+            item.setSalesTaxWithheldAtSource(i.getSalesTaxWithheldAtSource());
+            item.setExtraTax(i.getExtraTax());
+            item.setFurtherTax(i.getFurtherTax());
+            item.setSroScheduleNo(i.getSroScheduleNo());
+            item.setFedPayable(i.getFedPayable());
+            item.setDiscount(i.getDiscount());
+            item.setSaleType(i.getSaleType());
+            item.setSroItemSerialNo(i.getSroItemSerialNo());
+            return item;
+        }).collect(Collectors.toList());
+
+        payload.setItems(items);
+        return payload;
     }
 
     private String toJson(Object obj) {

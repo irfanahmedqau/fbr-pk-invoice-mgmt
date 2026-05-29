@@ -7,6 +7,9 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -39,32 +42,44 @@ import java.util.List;
 @Service
 public class ExcelParserService {
 
+    private static final Logger log = LoggerFactory.getLogger(ExcelParserService.class);
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     public List<FbrInvoicePayload> parseExcel(MultipartFile file, int sheetIndex) throws IOException {
+        log.info("Parsing Excel file: {}, sheetIndex: {}", file.getOriginalFilename(), sheetIndex);
         List<FbrInvoicePayload> invoices = new ArrayList<>();
 
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(sheetIndex);
+            log.info("Sheet '{}' opened — physical rows: {}", sheet.getSheetName(), sheet.getPhysicalNumberOfRows());
             boolean firstRow = true;
+            int rowNum = 1;
 
             for (Row row : sheet) {
-                if (firstRow) { firstRow = false; continue; }  // skip header
-                if (isRowEmpty(row)) continue;
-
+                if (firstRow) { firstRow = false; continue; }
+                if (isRowEmpty(row)) {
+                    log.debug("Row {} is empty — skipping", rowNum);
+                    rowNum++;
+                    continue;
+                }
+                log.debug("Parsing row {}", rowNum);
                 invoices.add(mapRow(row));
+                rowNum++;
             }
         }
+        log.info("Excel parsing complete — {} invoice rows extracted", invoices.size());
         return invoices;
     }
 
     public List<String> getSheetNames(MultipartFile file) throws IOException {
+        log.info("Reading sheet names from: {}", file.getOriginalFilename());
         List<String> names = new ArrayList<>();
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
             for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
                 names.add(workbook.getSheetName(i));
             }
         }
+        log.info("Found {} sheet(s): {}", names.size(), names);
         return names;
     }
 
