@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -21,6 +22,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional
 public class InvoiceService {
 
     private static final Logger log = LoggerFactory.getLogger(InvoiceService.class);
@@ -302,7 +304,8 @@ public class InvoiceService {
         invoice.setInvoiceRefNo(dto.getInvoiceRefNo());
         invoice.setScenarioId(dto.getScenarioId());
 
-        List<FbrItem> items = dto.getItems().stream().map(i -> {
+        List<FbrItemDto> dtoItems = dto.getItems() != null ? dto.getItems() : List.of();
+        List<FbrItem> items = dtoItems.stream().map(i -> {
             FbrItem item = new FbrItem();
             item.setHsCode(i.getHsCode());
             item.setProductDescription(i.getProductDescription());

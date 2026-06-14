@@ -93,20 +93,26 @@ export class BuyerFormComponent implements OnInit {
         this.validatingRegType = false;
         const raw = res?.['REGISTRATION_TYPE'] || res?.['registrationType'] || null;
         // Normalize casing: "registered" → "Registered", "unregistered" → "Unregistered"
-        const regType = raw ? this.normalizeRegType(raw) : 'Unregistered';
+        // Fall back to Registered: this is only called when ATL is active, so buyer is registered.
+        const regType = raw ? this.normalizeRegType(raw) : 'Registered';
         this.setRegType(regType);
       },
       error: () => {
-        // FBR returns HTTP 500 for unregistered taxpayers — treat as Unregistered
+        // ATL is active (fetchRegType is only called when isActive=true), so treat API errors
+        // as Registered rather than Unregistered — the ATL status is the authoritative signal.
         this.validatingRegType = false;
-        this.setRegType('Unregistered');
+        this.setRegType('Registered');
       }
     });
   }
 
   private setRegType(regType: string): void {
     this.regTypeResult = { registrationType: regType, label: regType };
-    this.parentForm.get('buyerRegistrationType')?.setValue(regType);
+    // enable → setValue → disable forces Angular Material to re-render the disabled input.
+    const ctrl = this.parentForm.get('buyerRegistrationType');
+    ctrl?.enable({ emitEvent: false });
+    ctrl?.setValue(regType);
+    ctrl?.disable({ emitEvent: false });
   }
 
   private normalizeRegType(value: string): string {
