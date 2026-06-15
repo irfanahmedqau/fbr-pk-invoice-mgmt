@@ -162,10 +162,7 @@ export class ManualEntryComponent implements OnInit {
   }
 
   resetForm(): void {
-    this.buildForm();
-    this.uploadDone = false;
-    this.mode = 'new';
-    this.invoiceId = null;
+    window.location.reload();
   }
 
   // ------------------------------------------------------------------
