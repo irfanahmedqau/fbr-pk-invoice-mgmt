@@ -21,6 +21,7 @@ public class InvoiceSummaryDto {
     private InvoiceStatus status;
     private LocalDateTime processedAt;
     private String validationResponse;
+    private String fbrInvRefNumber;
 
     public static InvoiceSummaryDto from(FbrInvoiceRequest entity) {
         InvoiceSummaryDto dto = new InvoiceSummaryDto();
@@ -37,6 +38,7 @@ public class InvoiceSummaryDto {
         dto.status              = entity.getStatus();
         dto.processedAt         = entity.getProcessedAt();
         dto.validationResponse  = entity.getValidationResponse();
+        dto.fbrInvRefNumber     = entity.getFbrInvRefNumber();
         return dto;
     }
 
@@ -53,4 +55,5 @@ public class InvoiceSummaryDto {
     public InvoiceStatus getStatus() { return status; }
     public LocalDateTime getProcessedAt() { return processedAt; }
     public String getValidationResponse() { return validationResponse; }
+    public String getFbrInvRefNumber() { return fbrInvRefNumber; }
 }

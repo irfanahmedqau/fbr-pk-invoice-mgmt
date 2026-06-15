@@ -123,22 +123,38 @@ public class InvoiceService {
             invoice = invoiceRepo.save(invoice);
 
             try {
-                Object fbrResponse = fbrApiService.validateInvoice(payload);
-                String statusCode = extractStatusCode(fbrResponse);
+                Object validateResponse = fbrApiService.validateInvoice(payload);
+                String validateStatusCode = extractStatusCode(validateResponse);
 
-                if ("00".equals(statusCode)) {
-                    invoice.setStatus(InvoiceStatus.VALIDATED);
-                    result.setStatus("SUCCESS");
-                    result.setMessage("Validated by FBR");
-                    success++;
-                } else {
+                if (!"00".equals(validateStatusCode)) {
                     invoice.setStatus(InvoiceStatus.FAILED);
+                    invoice.setValidationResponse(objectMapper.writeValueAsString(validateResponse));
                     result.setStatus("FAILED");
-                    result.setMessage("FBR validation failed — statusCode: " + statusCode);
+                    result.setMessage("FBR validation failed — statusCode: " + validateStatusCode);
+                    result.setFbrResponse(validateResponse);
                     failed++;
+                } else {
+                    invoice.setStatus(InvoiceStatus.VALIDATED);
+                    invoiceRepo.save(invoice);
+
+                    Object postResponse = fbrApiService.postInvoice(payload);
+                    String postStatusCode = extractStatusCode(postResponse);
+
+                    if ("00".equals(postStatusCode)) {
+                        invoice.setStatus(InvoiceStatus.POSTED);
+                        invoice.setFbrInvRefNumber(extractFbrInvRefNumber(postResponse));
+                        result.setStatus("SUCCESS");
+                        result.setMessage("Posted to FBR successfully");
+                        success++;
+                    } else {
+                        invoice.setStatus(InvoiceStatus.FAILED);
+                        result.setStatus("FAILED");
+                        result.setMessage("FBR post failed — statusCode: " + postStatusCode);
+                        failed++;
+                    }
+                    invoice.setValidationResponse(objectMapper.writeValueAsString(postResponse));
+                    result.setFbrResponse(postResponse);
                 }
-                invoice.setValidationResponse(objectMapper.writeValueAsString(fbrResponse));
-                result.setFbrResponse(fbrResponse);
             } catch (Exception ex) {
                 invoice.setStatus(InvoiceStatus.FAILED);
                 invoice.setValidationResponse(ex.getMessage());
@@ -236,9 +252,14 @@ public class InvoiceService {
 
         try {
             Object fbrResponse = fbrApiService.postInvoice(entityToPayload(invoice));
-            String statusCode = extractStatusCode(fbrResponse);
+            String postStatusCode = extractStatusCode(fbrResponse);
 
-            invoice.setStatus("00".equals(statusCode) ? InvoiceStatus.POSTED : InvoiceStatus.FAILED);
+            if ("00".equals(postStatusCode)) {
+                invoice.setStatus(InvoiceStatus.POSTED);
+                invoice.setFbrInvRefNumber(extractFbrInvRefNumber(fbrResponse));
+            } else {
+                invoice.setStatus(InvoiceStatus.FAILED);
+            }
             invoice.setValidationResponse(toJson(fbrResponse));
             invoice.setProcessedAt(LocalDateTime.now());
             invoiceRepo.save(invoice);
@@ -258,14 +279,33 @@ public class InvoiceService {
 
     private Object validateAndUpdateStatus(FbrInvoiceRequest invoice, FbrInvoicePayload payload) {
         try {
-            Object fbrResponse = fbrApiService.validateInvoice(payload);
-            String statusCode = extractStatusCode(fbrResponse);
+            Object validateResponse = fbrApiService.validateInvoice(payload);
+            String validateStatusCode = extractStatusCode(validateResponse);
 
-            invoice.setStatus("00".equals(statusCode) ? InvoiceStatus.VALIDATED : InvoiceStatus.FAILED);
-            invoice.setValidationResponse(toJson(fbrResponse));
+            if (!"00".equals(validateStatusCode)) {
+                invoice.setStatus(InvoiceStatus.FAILED);
+                invoice.setValidationResponse(toJson(validateResponse));
+                invoice.setProcessedAt(LocalDateTime.now());
+                invoiceRepo.save(invoice);
+                return validateResponse;
+            }
+
+            invoice.setStatus(InvoiceStatus.VALIDATED);
+            invoiceRepo.save(invoice);
+
+            Object postResponse = fbrApiService.postInvoice(payload);
+            String postStatusCode = extractStatusCode(postResponse);
+
+            if ("00".equals(postStatusCode)) {
+                invoice.setStatus(InvoiceStatus.POSTED);
+                invoice.setFbrInvRefNumber(extractFbrInvRefNumber(postResponse));
+            } else {
+                invoice.setStatus(InvoiceStatus.FAILED);
+            }
+            invoice.setValidationResponse(toJson(postResponse));
             invoice.setProcessedAt(LocalDateTime.now());
             invoiceRepo.save(invoice);
-            return fbrResponse;
+            return postResponse;
         } catch (Exception ex) {
             invoice.setStatus(InvoiceStatus.FAILED);
             invoice.setValidationResponse(ex.getMessage());
@@ -285,55 +325,6 @@ public class InvoiceService {
     private FbrInvoiceRequest findOrCreate(String invoiceRefNo) {
         return invoiceRepo.findFirstByInvoiceRefNoOrderByIdDesc(invoiceRefNo)
                 .orElse(new FbrInvoiceRequest());
-    }
-
-    private void populateFromDto(FbrInvoiceRequest invoice, FbrInvoiceRequestDto dto) {
-        invoice.setInvoiceType(dto.getInvoiceType());
-        if (dto.getInvoiceDate() != null && !dto.getInvoiceDate().isEmpty()) {
-            invoice.setInvoiceDate(LocalDate.parse(dto.getInvoiceDate()));
-        }
-        invoice.setSellerNTNCNIC(dto.getSellerNtnCnic());
-        invoice.setSellerBusinessName(dto.getSellerBusinessName());
-        invoice.setSellerProvince(dto.getSellerProvince());
-        invoice.setSellerAddress(dto.getSellerAddress());
-        invoice.setBuyerNTNCNIC(dto.getBuyerNtnCnic());
-        invoice.setBuyerBusinessName(dto.getBuyerBusinessName());
-        invoice.setBuyerProvince(dto.getBuyerProvince());
-        invoice.setBuyerAddress(dto.getBuyerAddress());
-        invoice.setBuyerRegistrationType(dto.getBuyerRegistrationType());
-        invoice.setInvoiceRefNo(dto.getInvoiceRefNo());
-        invoice.setScenarioId(dto.getScenarioId());
-
-        List<FbrItemDto> dtoItems = dto.getItems() != null ? dto.getItems() : List.of();
-        List<FbrItem> items = dtoItems.stream().map(i -> {
-            FbrItem item = new FbrItem();
-            item.setHsCode(i.getHsCode());
-            item.setProductDescription(i.getProductDescription());
-            item.setRate(i.getRate());
-            item.setUoM(i.getUom());
-            item.setQuantity(i.getQuantity());
-            item.setTotalValues(i.getTotalValue());
-            item.setValueSalesExcludingST(i.getValueSalesExcludingSt());
-            item.setFixedNotifiedValueOrRetailPrice(i.getFixedNotifiedValueOrRetailPrice());
-            item.setSalesTaxApplicable(i.getSalesTaxApplicable());
-            item.setSalesTaxWithheldAtSource(i.getSalesTaxWithheldAtSource());
-            item.setExtraTax(i.getExtraTax());
-            item.setFurtherTax(i.getFurtherTax());
-            item.setSroScheduleNo(i.getSroScheduleNo());
-            item.setFedPayable(i.getFedPayable());
-            item.setDiscount(i.getDiscount());
-            item.setSaleType(i.getSaleType());
-            item.setSroItemSerialNo(i.getSroItemSerialNo());
-            item.setInvoice(invoice);
-            return item;
-        }).collect(Collectors.toList());
-
-        if (invoice.getItems() != null) {
-            invoice.getItems().clear();
-            invoice.getItems().addAll(items);
-        } else {
-            invoice.setItems(items);
-        }
     }
 
     private void populateFromPayload(FbrInvoiceRequest invoice, FbrInvoicePayload payload) {
@@ -384,48 +375,6 @@ public class InvoiceService {
         }
     }
 
-    private FbrInvoicePayload toFbrPayload(FbrInvoiceRequestDto dto) {
-        FbrInvoicePayload payload = new FbrInvoicePayload();
-        payload.setInvoiceType(dto.getInvoiceType());
-        payload.setInvoiceDate(dto.getInvoiceDate());
-        payload.setSellerNTNCNIC(dto.getSellerNtnCnic());
-        payload.setSellerBusinessName(dto.getSellerBusinessName());
-        payload.setSellerProvince(dto.getSellerProvince());
-        payload.setSellerAddress(dto.getSellerAddress());
-        payload.setBuyerNTNCNIC(dto.getBuyerNtnCnic());
-        payload.setBuyerBusinessName(dto.getBuyerBusinessName());
-        payload.setBuyerProvince(dto.getBuyerProvince());
-        payload.setBuyerAddress(dto.getBuyerAddress());
-        payload.setBuyerRegistrationType(dto.getBuyerRegistrationType());
-        payload.setInvoiceRefNo(dto.getInvoiceRefNo());
-        payload.setScenarioId(dto.getScenarioId());
-
-        List<FbrItemPayload> items = dto.getItems().stream().map(i -> {
-            FbrItemPayload item = new FbrItemPayload();
-            item.setHsCode(i.getHsCode());
-            item.setProductDescription(i.getProductDescription());
-            item.setRate(i.getRate());
-            item.setUoM(i.getUom());
-            item.setQuantity(i.getQuantity());
-            item.setTotalValues(i.getTotalValue());
-            item.setValueSalesExcludingST(i.getValueSalesExcludingSt());
-            item.setFixedNotifiedValueOrRetailPrice(i.getFixedNotifiedValueOrRetailPrice());
-            item.setSalesTaxApplicable(i.getSalesTaxApplicable());
-            item.setSalesTaxWithheldAtSource(i.getSalesTaxWithheldAtSource());
-            item.setExtraTax(i.getExtraTax());
-            item.setFurtherTax(i.getFurtherTax());
-            item.setSroScheduleNo(i.getSroScheduleNo());
-            item.setFedPayable(i.getFedPayable());
-            item.setDiscount(i.getDiscount());
-            item.setSaleType(i.getSaleType());
-            item.setSroItemSerialNo(i.getSroItemSerialNo());
-            return item;
-        }).collect(Collectors.toList());
-
-        payload.setItems(items);
-        return payload;
-    }
-
     @SuppressWarnings("unchecked")
     private String extractStatusCode(Object fbrResponse) {
         try {
@@ -438,6 +387,17 @@ public class InvoiceService {
             }
         } catch (Exception ignored) {}
         return "UNKNOWN";
+    }
+
+    @SuppressWarnings("unchecked")
+    private String extractFbrInvRefNumber(Object fbrResponse) {
+        try {
+            if (fbrResponse instanceof Map) {
+                Object ref = ((Map<String, Object>) fbrResponse).get("invoiceNumber");
+                if (ref != null) return String.valueOf(ref);
+            }
+        } catch (Exception ignored) {}
+        return null;
     }
 
     private FbrInvoicePayload entityToPayload(FbrInvoiceRequest invoice) {

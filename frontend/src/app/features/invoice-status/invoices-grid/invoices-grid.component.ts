@@ -15,7 +15,7 @@ export class InvoicesGridComponent implements OnInit {
   loading = false;
 
   displayedColumns = [
-    'invoiceRefNo', 'invoiceDate', 'buyerBusinessName',
+    'invoiceRefNo', 'fbrInvRefNumber', 'invoiceDate', 'buyerBusinessName',
     'buyerNTNCNIC', 'scenarioId', 'processedAt', 'status', 'actions'
   ];
 

@@ -35,6 +35,19 @@
           </mat-cell>
         </ng-container>
 
+        <!-- FBR Invoice Reference Number (populated after successful POST) -->
+        <ng-container matColumnDef="fbrInvRefNumber">
+          <mat-header-cell *matHeaderCellDef>FBR Inv Ref No</mat-header-cell>
+          <mat-cell *matCellDef="let row">
+            <span *ngIf="row.fbrInvRefNumber; else noRef">
+              <strong>{{ row.fbrInvRefNumber }}</strong>
+            </span>
+            <ng-template #noRef>
+              <span class="muted">—</span>
+            </ng-template>
+          </mat-cell>
+        </ng-container>
+
         <!-- Invoice Date -->
         <ng-container matColumnDef="invoiceDate">
           <mat-header-cell *matHeaderCellDef>Date</mat-header-cell>

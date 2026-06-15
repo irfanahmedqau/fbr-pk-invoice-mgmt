@@ -32,6 +32,7 @@ public class FbrInvoiceRequest {
     private String buyerRegistrationType;
     private String invoiceRefNo;
     private String scenarioId;
+    private String fbrInvRefNumber;
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false)
@@ -156,6 +157,14 @@ public class FbrInvoiceRequest {
 
 	public void setScenarioId(String scenarioId) {
 		this.scenarioId = scenarioId;
+	}
+
+	public String getFbrInvRefNumber() {
+		return fbrInvRefNumber;
+	}
+
+	public void setFbrInvRefNumber(String fbrInvRefNumber) {
+		this.fbrInvRefNumber = fbrInvRefNumber;
 	}
 
 	public InvoiceStatus getStatus() {

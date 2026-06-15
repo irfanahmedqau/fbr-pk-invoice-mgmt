@@ -71,6 +71,7 @@ export interface InvoiceSummary {
   status: InvoiceStatus;
   processedAt: string;
   validationResponse: string;
+  fbrInvRefNumber?: string;
 }
 
 export interface InvoiceDetail extends InvoiceSummary {
