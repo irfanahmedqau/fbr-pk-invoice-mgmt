@@ -1,7 +1,8 @@
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
-import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
 import { FbrItem, HsCode } from '../../../core/models/invoice.model';
 import { FbrLookupService } from '../../../core/services/fbr-lookup.service';
 
@@ -23,9 +24,21 @@ const SALE_TYPES   = [
   templateUrl: './item-entry-form.component.html',
   styleUrl: './item-entry-form.component.scss'
 })
-export class ItemEntryFormComponent implements OnInit {
+export class ItemEntryFormComponent implements OnInit, OnDestroy {
 
-  @Output() itemAdded = new EventEmitter<FbrItem>();
+  @Output() itemAdded   = new EventEmitter<FbrItem>();
+  @Output() itemUpdated = new EventEmitter<{ item: FbrItem; index: number }>();
+
+  private _editIndex: number | null = null;
+
+  get editIndex(): number | null { return this._editIndex; }
+
+  @Input() set editRequest(req: { item: FbrItem; index: number } | null) {
+    this._editIndex = req?.index ?? null;
+    if (req && this.itemForm) {
+      this.itemForm.patchValue(req.item);
+    }
+  }
 
   itemForm!: FormGroup;
   uomOptions = UOM_OPTIONS;
@@ -34,6 +47,8 @@ export class ItemEntryFormComponent implements OnInit {
   allHsCodes:      HsCode[] = [];
   filteredHsCodes: HsCode[] = [];
   hsCodesLoading = false;
+
+  private destroy$ = new Subject<void>();
 
   constructor(
     private fb: FormBuilder,
@@ -47,7 +62,7 @@ export class ItemEntryFormComponent implements OnInit {
       rate:                            ['18%', Validators.required],
       uoM:                             ['KG', Validators.required],
       quantity:                        [0, [Validators.required, Validators.min(0.001)]],
-      totalValues:                     [0, Validators.required],
+      totalValues:                     [{ value: 0, disabled: true }],
       valueSalesExcludingST:           [0],
       fixedNotifiedValueOrRetailPrice: [0],
       salesTaxApplicable:              [0],
@@ -66,8 +81,51 @@ export class ItemEntryFormComponent implements OnInit {
     // Filter as user types in HS Code field
     this.itemForm.get('hsCode')?.valueChanges.pipe(
       debounceTime(250),
-      distinctUntilChanged()
+      distinctUntilChanged(),
+      takeUntil(this.destroy$)
     ).subscribe(val => this.filterHsCodes(val));
+
+    // Recalculate GST and total whenever value-excl-ST or rate changes
+    this.itemForm.get('valueSalesExcludingST')?.valueChanges.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(() => this.recalcFinancials());
+
+    this.itemForm.get('rate')?.valueChanges.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(() => this.recalcFinancials());
+
+    // When user manually edits GST, keep total in sync
+    this.itemForm.get('salesTaxApplicable')?.valueChanges.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(() => this.recalcTotal());
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private parseRatePercent(rateStr: string): number {
+    if (!rateStr) return 0;
+    const match = rateStr.match(/[\d.]+/);
+    return match ? parseFloat(match[0]) / 100 : 0;
+  }
+
+  private recalcFinancials(): void {
+    const valueExclST = parseFloat(this.itemForm.get('valueSalesExcludingST')?.value) || 0;
+    const rateStr     = this.itemForm.get('rate')?.value ?? '';
+    const rateDecimal = this.parseRatePercent(rateStr);
+
+    const gst = parseFloat((valueExclST * rateDecimal).toFixed(2));
+    this.itemForm.get('salesTaxApplicable')?.setValue(gst, { emitEvent: false });
+    this.recalcTotal();
+  }
+
+  private recalcTotal(): void {
+    const valueExclST = parseFloat(this.itemForm.get('valueSalesExcludingST')?.value) || 0;
+    const gst         = parseFloat(this.itemForm.get('salesTaxApplicable')?.value) || 0;
+    const total       = parseFloat((valueExclST + gst).toFixed(2));
+    this.itemForm.get('totalValues')?.setValue(total, { emitEvent: false });
   }
 
   private loadHsCodes(): void {
@@ -108,13 +166,27 @@ export class ItemEntryFormComponent implements OnInit {
     return typeof code === 'string' ? code : code.hS_CODE;
   }
 
-  addItem(): void {
+  saveItem(): void {
     if (this.itemForm.invalid) { this.itemForm.markAllAsTouched(); return; }
 
-    const raw = this.itemForm.value;
-    // If user selected from autocomplete, value is still the HsCode string (we set it via setValue)
-    this.itemAdded.emit(raw as FbrItem);
+    const raw = this.itemForm.getRawValue() as FbrItem;
 
+    if (this._editIndex !== null) {
+      this.itemUpdated.emit({ item: raw, index: this._editIndex });
+    } else {
+      this.itemAdded.emit(raw);
+    }
+
+    this.resetForm();
+  }
+
+  cancelEdit(): void {
+    this._editIndex = null;
+    this.resetForm();
+  }
+
+  private resetForm(): void {
+    this._editIndex = null;
     this.itemForm.reset({
       rate: '18%', uoM: 'KG', quantity: 0, totalValues: 0,
       valueSalesExcludingST: 0, fixedNotifiedValueOrRetailPrice: 0,

@@ -65,11 +65,6 @@
   <div class="form-row row-4">
 
     <mat-form-field appearance="outline">
-      <mat-label>Total Values</mat-label>
-      <input matInput type="number" formControlName="totalValues">
-    </mat-form-field>
-
-    <mat-form-field appearance="outline">
       <mat-label>Value Sales Excl. ST</mat-label>
       <input matInput type="number" formControlName="valueSalesExcludingST">
     </mat-form-field>
@@ -80,8 +75,8 @@
     </mat-form-field>
 
     <mat-form-field appearance="outline">
-      <mat-label>Sales Tax Applicable</mat-label>
-      <input matInput type="number" formControlName="salesTaxApplicable">
+      <mat-label>Discount</mat-label>
+      <input matInput type="number" formControlName="discount">
     </mat-form-field>
 
     <mat-form-field appearance="outline">
@@ -100,8 +95,15 @@
     </mat-form-field>
 
     <mat-form-field appearance="outline">
-      <mat-label>Discount</mat-label>
-      <input matInput type="number" formControlName="discount">
+      <mat-label>Sales Tax (GST)</mat-label>
+      <input matInput type="number" formControlName="salesTaxApplicable">
+      <mat-hint>Auto-calculated, or enter manually</mat-hint>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Total Values (incl. GST)</mat-label>
+      <input matInput type="number" formControlName="totalValues" readonly>
+      <mat-hint>Auto-calculated: Value + GST</mat-hint>
     </mat-form-field>
 
   </div>
@@ -139,10 +141,15 @@
     <mat-error *ngIf="itemForm.get('saleType')?.hasError('required')">Required</mat-error>
   </mat-form-field>
 
-  <!-- ── Add button ── -->
+  <!-- ── Add / Update button ── -->
   <div class="add-btn-row">
-    <button mat-raised-button color="primary" type="button" (click)="addItem()">
-      <mat-icon>add_circle_outline</mat-icon> Add Item to Invoice
+    <button mat-raised-button color="primary" type="button" (click)="saveItem()">
+      <mat-icon>{{ editIndex !== null ? 'save' : 'add_circle_outline' }}</mat-icon>
+      {{ editIndex !== null ? 'Update Item' : 'Add Item to Invoice' }}
+    </button>
+    <button *ngIf="editIndex !== null"
+            mat-stroked-button type="button" (click)="cancelEdit()" style="margin-left:8px">
+      <mat-icon>close</mat-icon> Cancel Edit
     </button>
   </div>
 

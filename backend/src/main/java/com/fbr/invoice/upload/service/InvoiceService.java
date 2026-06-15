@@ -37,9 +37,9 @@ public class InvoiceService {
     // Save invoice to local DB only (no FBR call)
     // ------------------------------------------------------------------
 
-    public FbrInvoiceRequest saveInvoice(FbrInvoiceRequestDto dto) {
-        FbrInvoiceRequest invoice = findOrCreate(dto.getInvoiceRefNo());
-        populateFromDto(invoice, dto);
+    public FbrInvoiceRequest saveInvoice(FbrInvoicePayload payload) {
+        FbrInvoiceRequest invoice = findOrCreate(payload.getInvoiceRefNo());
+        populateFromPayload(invoice, payload);
         invoice.setStatus(InvoiceStatus.PENDING);
         invoice.setProcessedAt(LocalDateTime.now());
         return invoiceRepo.save(invoice);
@@ -50,23 +50,23 @@ public class InvoiceService {
     // Duplicate rule: POSTED invoices cannot be resubmitted via this path.
     // ------------------------------------------------------------------
 
-    public Object uploadFromDto(FbrInvoiceRequestDto dto) {
-        guardAgainstDuplicate(dto.getInvoiceRefNo());
+    public Object uploadFromDto(FbrInvoicePayload payload) {
+        guardAgainstDuplicate(payload.getInvoiceRefNo());
 
-        FbrInvoiceRequest invoice = findOrCreate(dto.getInvoiceRefNo());
-        populateFromDto(invoice, dto);
+        FbrInvoiceRequest invoice = findOrCreate(payload.getInvoiceRefNo());
+        populateFromPayload(invoice, payload);
         invoice.setStatus(InvoiceStatus.PENDING);
         invoice.setProcessedAt(LocalDateTime.now());
         invoice = invoiceRepo.save(invoice);
 
-        return validateAndUpdateStatus(invoice, toFbrPayload(dto));
+        return validateAndUpdateStatus(invoice, payload);
     }
 
     // ------------------------------------------------------------------
     // Resubmit a FAILED invoice — allowed to update data + retry FBR
     // ------------------------------------------------------------------
 
-    public Object resubmitInvoice(Long id, FbrInvoiceRequestDto dto) {
+    public Object resubmitInvoice(Long id, FbrInvoicePayload payload) {
         FbrInvoiceRequest invoice = invoiceRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Invoice not found: " + id));
 
@@ -75,12 +75,12 @@ public class InvoiceService {
                 "Only FAILED invoices can be resubmitted. Current status: " + invoice.getStatus());
         }
 
-        populateFromDto(invoice, dto);
+        populateFromPayload(invoice, payload);
         invoice.setStatus(InvoiceStatus.PENDING);
         invoice.setProcessedAt(LocalDateTime.now());
         invoice = invoiceRepo.save(invoice);
 
-        return validateAndUpdateStatus(invoice, toFbrPayload(dto));
+        return validateAndUpdateStatus(invoice, payload);
     }
 
     // ------------------------------------------------------------------

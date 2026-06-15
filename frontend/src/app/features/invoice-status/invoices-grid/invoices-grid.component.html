@@ -4,7 +4,7 @@
     <mat-card-header>
       <mat-card-title>Invoice Status Board</mat-card-title>
       <mat-card-subtitle>
-        FAILED invoices can be edited and resubmitted. All others are view-only.
+        PENDING: submit to FBR &nbsp;|&nbsp; FAILED: edit &amp; resubmit &nbsp;|&nbsp; POSTED: view-only
       </mat-card-subtitle>
     </mat-card-header>
 
@@ -71,7 +71,9 @@
         <ng-container matColumnDef="status">
           <mat-header-cell *matHeaderCellDef>Status</mat-header-cell>
           <mat-cell *matCellDef="let row">
-            <span class="status-chip" [ngClass]="statusClass(row.status)">
+            <span class="status-chip" [ngClass]="statusClass(row.status)"
+                  [matTooltip]="fbrErrorTooltip(row)"
+                  matTooltipClass="fbr-error-tooltip">
               <mat-icon class="chip-icon">{{ statusIcon(row.status) }}</mat-icon>
               {{ row.status }}
             </span>
@@ -82,19 +84,31 @@
         <ng-container matColumnDef="actions">
           <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
           <mat-cell *matCellDef="let row">
-            <!-- FAILED: Edit & Resubmit -->
-            <button *ngIf="canResubmit(row)"
-                    mat-raised-button color="warn" style="margin-right:8px"
-                    (click)="editAndResubmit(row)"
-                    matTooltip="Edit invoice data and resubmit to FBR">
-              <mat-icon>edit</mat-icon> Edit & Resubmit
+
+            <!-- PENDING: submit to FBR -->
+            <button *ngIf="row.status === 'PENDING'"
+                    mat-raised-button color="primary"
+                    (click)="openInvoice(row)"
+                    matTooltip="Open invoice and submit to FBR">
+              <mat-icon>cloud_upload</mat-icon> Submit to FBR
             </button>
 
-            <!-- All statuses: View -->
-            <button mat-stroked-button (click)="viewInvoice(row)"
+            <!-- FAILED: edit and resubmit -->
+            <button *ngIf="row.status === 'FAILED'"
+                    mat-raised-button color="warn"
+                    (click)="openInvoice(row)"
+                    matTooltip="Edit invoice data and resubmit to FBR">
+              <mat-icon>edit</mat-icon> Edit &amp; Resubmit
+            </button>
+
+            <!-- POSTED / VALIDATED: view only -->
+            <button *ngIf="row.status === 'POSTED' || row.status === 'VALIDATED'"
+                    mat-stroked-button
+                    (click)="openInvoice(row)"
                     matTooltip="View invoice details (read-only)">
               <mat-icon>visibility</mat-icon> View
             </button>
+
           </mat-cell>
         </ng-container>
 

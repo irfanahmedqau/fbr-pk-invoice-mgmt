@@ -1,7 +1,5 @@
 package com.fbr.invoice.upload.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fbr.invoice.upload.dto.*;
 import com.fbr.invoice.upload.entity.FbrInvoiceRequest;
 import com.fbr.invoice.upload.service.InvoiceService;
@@ -29,13 +27,8 @@ public class InvoiceController {
     // ------------------------------------------------------------------
 
     @PostMapping("/save-invoice")
-    public ResponseEntity<FbrInvoiceRequest> insertInvoice(@RequestBody FbrInvoiceRequestDto dto) {
-        try {
-            System.out.println("Received DTO: " + new ObjectMapper().writeValueAsString(dto));
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-        return ResponseEntity.ok(invoiceService.saveInvoice(dto));
+    public ResponseEntity<FbrInvoiceRequest> insertInvoice(@RequestBody FbrInvoicePayload payload) {
+        return ResponseEntity.ok(invoiceService.saveInvoice(payload));
     }
 
     // ------------------------------------------------------------------
@@ -43,8 +36,8 @@ public class InvoiceController {
     // ------------------------------------------------------------------
 
     @PostMapping("/upload")
-    public ResponseEntity<Object> uploadInvoice(@RequestBody FbrInvoiceRequestDto dto) {
-        Object fbrResponse = invoiceService.uploadFromDto(dto);
+    public ResponseEntity<Object> uploadInvoice(@RequestBody FbrInvoicePayload payload) {
+        Object fbrResponse = invoiceService.uploadFromDto(payload);
         return ResponseEntity.ok(fbrResponse);
     }
 
@@ -64,8 +57,8 @@ public class InvoiceController {
     @PutMapping("/{id}/resubmit")
     public ResponseEntity<Object> resubmitInvoice(
             @PathVariable Long id,
-            @RequestBody FbrInvoiceRequestDto dto) {
-        Object fbrResponse = invoiceService.resubmitInvoice(id, dto);
+            @RequestBody FbrInvoicePayload payload) {
+        Object fbrResponse = invoiceService.resubmitInvoice(id, payload);
         return ResponseEntity.ok(fbrResponse);
     }
 

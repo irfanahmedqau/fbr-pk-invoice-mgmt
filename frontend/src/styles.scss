@@ -87,6 +87,14 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; background:
   color: #e65100;
 }
 
+/* FBR error tooltip */
+.fbr-error-tooltip {
+  white-space: pre-line;
+  max-width: 420px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 @media (max-width: 900px) {
   .form-row { grid-template-columns: 1fr; }
   .page-content { padding: 12px; }

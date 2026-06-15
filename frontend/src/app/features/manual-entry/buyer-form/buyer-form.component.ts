@@ -89,13 +89,10 @@ export class BuyerFormComponent implements OnInit {
     this.validatingRegType = true;
 
     this.fbrLookup.getBuyerRegType(ntn).subscribe({
-      next: (res) => {
+      next: (_res) => {
         this.validatingRegType = false;
-        const raw = res?.['REGISTRATION_TYPE'] || res?.['registrationType'] || null;
-        // Normalize casing: "registered" → "Registered", "unregistered" → "Unregistered"
-        // Fall back to Registered: this is only called when ATL is active, so buyer is registered.
-        const regType = raw ? this.normalizeRegType(raw) : 'Registered';
-        this.setRegType(regType);
+        // ATL is active → always Registered regardless of reg-type API response.
+        this.setRegType('Registered');
       },
       error: () => {
         // ATL is active (fetchRegType is only called when isActive=true), so treat API errors
@@ -113,14 +110,6 @@ export class BuyerFormComponent implements OnInit {
     ctrl?.enable({ emitEvent: false });
     ctrl?.setValue(regType);
     ctrl?.disable({ emitEvent: false });
-  }
-
-  private normalizeRegType(value: string): string {
-    const lower = value.toLowerCase().trim();
-    if (lower === 'registered')   return 'Registered';
-    if (lower === 'unregistered') return 'Unregistered';
-    // Return as-is with first letter capitalised for anything else
-    return value.charAt(0).toUpperCase() + value.slice(1);
   }
 
   private resetVerification(): void {

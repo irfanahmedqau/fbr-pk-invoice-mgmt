@@ -2,9 +2,10 @@
 
   <!-- Mode banner -->
   <div class="mode-banner" *ngIf="!isNewMode">
-    <mat-icon>{{ isViewOnly ? 'visibility' : 'edit' }}</mat-icon>
-    <span *ngIf="isViewOnly">View-only — Invoice #{{ invoiceId }}</span>
-    <span *ngIf="isEditMode">Edit & Resubmit — Invoice #{{ invoiceId }} (FAILED)</span>
+    <mat-icon>{{ isViewOnly ? 'visibility' : isSubmitMode ? 'cloud_upload' : 'edit' }}</mat-icon>
+    <span *ngIf="isViewOnly">View-only — Invoice #{{ invoiceId }} (POSTED)</span>
+    <span *ngIf="isSubmitMode">Submit to FBR — Invoice #{{ invoiceId }} (PENDING)</span>
+    <span *ngIf="isEditMode">Edit &amp; Resubmit — Invoice #{{ invoiceId }} (FAILED)</span>
     <button mat-stroked-button (click)="backToGrid()" style="margin-left:auto">
       <mat-icon>arrow_back</mat-icon> Back to Status Board
     </button>
@@ -39,11 +40,15 @@
       </mat-card>
     </div>
 
-    <!-- Item entry form — hidden in view mode -->
+    <!-- Item entry form — hidden in view mode only -->
     <mat-card class="item-card" *ngIf="!isViewOnly">
       <mat-card-header><mat-card-title>Add Invoice Item</mat-card-title></mat-card-header>
       <mat-card-content>
-        <app-item-entry-form (itemAdded)="addItem($event)"></app-item-entry-form>
+        <app-item-entry-form
+          (itemAdded)="addItem($event)"
+          (itemUpdated)="onItemUpdated($event)"
+          [editRequest]="editRequest">
+        </app-item-entry-form>
       </mat-card-content>
     </mat-card>
 
@@ -52,7 +57,12 @@
         <mat-card-title>Invoice Items ({{ items.length }})</mat-card-title>
       </mat-card-header>
       <mat-card-content>
-        <app-items-grid [items]="items" (removeItem)="removeItem($event)"></app-items-grid>
+        <app-items-grid
+          [items]="items"
+          [viewOnly]="isViewOnly"
+          (removeItem)="removeItem($event)"
+          (editItem)="onEditItem($event)">
+        </app-items-grid>
       </mat-card-content>
     </mat-card>
 
@@ -72,7 +82,20 @@
         </button>
       </ng-container>
 
-      <!-- Resubmit FAILED -->
+      <!-- Submit PENDING invoice to FBR (pre-loaded, same flow as new) -->
+      <ng-container *ngIf="isSubmitMode">
+        <button mat-raised-button color="accent" (click)="saveToDb()" [disabled]="saving || uploading">
+          <mat-icon>save</mat-icon> {{ saving ? 'Saving…' : 'Save to DB' }}
+        </button>
+        <button mat-raised-button color="primary" (click)="submitToFbr()" [disabled]="saving || uploading">
+          <mat-icon>cloud_upload</mat-icon> {{ uploading ? 'Submitting…' : 'Submit to FBR' }}
+        </button>
+        <button mat-stroked-button (click)="backToGrid()" [disabled]="saving || uploading">
+          <mat-icon>close</mat-icon> Cancel
+        </button>
+      </ng-container>
+
+      <!-- Resubmit FAILED invoice -->
       <ng-container *ngIf="isEditMode">
         <button mat-raised-button color="warn" (click)="resubmitToFbr()" [disabled]="uploading">
           <mat-icon>replay</mat-icon> {{ uploading ? 'Resubmitting…' : 'Resubmit to FBR' }}

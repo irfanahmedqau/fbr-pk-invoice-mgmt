@@ -38,16 +38,32 @@ export class InvoicesGridComponent implements OnInit {
     });
   }
 
-  canResubmit(invoice: InvoiceSummary): boolean {
-    return invoice.status === 'FAILED';
+  openInvoice(invoice: InvoiceSummary): void {
+    if (invoice.status === 'POSTED' || invoice.status === 'VALIDATED') {
+      this.router.navigate(['/manual-entry', invoice.id], { queryParams: { mode: 'view' } });
+    } else if (invoice.status === 'FAILED') {
+      this.router.navigate(['/manual-entry', invoice.id], { queryParams: { mode: 'edit' } });
+    } else {
+      this.router.navigate(['/manual-entry', invoice.id], { queryParams: { mode: 'submit' } });
+    }
   }
 
-  editAndResubmit(invoice: InvoiceSummary): void {
-    this.router.navigate(['/manual-entry', invoice.id]);
-  }
+  fbrErrorTooltip(invoice: InvoiceSummary): string {
+    if (invoice.status !== 'FAILED' || !invoice.validationResponse) return '';
+    try {
+      const r = JSON.parse(invoice.validationResponse);
+      const vr = r?.validationResponse;
+      if (!vr) return invoice.validationResponse;
 
-  viewInvoice(invoice: InvoiceSummary): void {
-    this.router.navigate(['/manual-entry', invoice.id], { queryParams: { mode: 'view' } });
+      const lines: string[] = [];
+      if (vr.error) lines.push(vr.error);
+      for (const s of vr.invoiceStatuses ?? []) {
+        if (s.error) lines.push(`Item ${s.itemSNo} [${s.errorCode ?? s.statusCode}]: ${s.error}`);
+      }
+      return lines.length ? lines.join('\n') : `Status ${vr.statusCode}: ${vr.status}`;
+    } catch {
+      return invoice.validationResponse;
+    }
   }
 
   statusClass(status: InvoiceStatus): string {

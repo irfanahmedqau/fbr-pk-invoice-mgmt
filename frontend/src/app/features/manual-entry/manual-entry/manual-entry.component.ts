@@ -5,7 +5,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { InvoiceService } from '../../../core/services/invoice.service';
 import { FbrInvoicePayload, FbrItem, InvoiceDetail } from '../../../core/models/invoice.model';
 
-export type EntryMode = 'new' | 'edit' | 'view';
+export type EntryMode = 'new' | 'submit' | 'edit' | 'view';
 
 @Component({
   selector: 'app-manual-entry',
@@ -21,6 +21,7 @@ export class ManualEntryComponent implements OnInit {
   uploading = false;
   uploadDone = false;
   loadingInvoice = false;
+  editRequest: { item: FbrItem; index: number } | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -38,14 +39,17 @@ export class ManualEntryComponent implements OnInit {
 
     if (id) {
       this.invoiceId = +id;
-      this.mode = viewMode === 'view' ? 'view' : 'edit';
+      if (viewMode === 'view')        this.mode = 'view';
+      else if (viewMode === 'submit') this.mode = 'submit';
+      else                            this.mode = 'edit';
       this.loadInvoice(this.invoiceId);
     }
   }
 
-  get isViewOnly(): boolean { return this.mode === 'view'; }
-  get isEditMode(): boolean { return this.mode === 'edit'; }
-  get isNewMode():  boolean { return this.mode === 'new'; }
+  get isViewOnly():   boolean { return this.mode === 'view'; }
+  get isEditMode():   boolean { return this.mode === 'edit'; }
+  get isNewMode():    boolean { return this.mode === 'new'; }
+  get isSubmitMode(): boolean { return this.mode === 'submit'; }
 
   get items(): FormArray {
     return this.invoiceForm.get('items') as FormArray;
@@ -53,7 +57,11 @@ export class ManualEntryComponent implements OnInit {
 
   addItem(item: FbrItem): void {
     if (this.isViewOnly) return;
-    this.items.push(this.fb.group({
+    this.items.push(this.buildItemGroup(item));
+  }
+
+  private buildItemGroup(item: FbrItem): ReturnType<typeof this.fb.group> {
+    return this.fb.group({
       hsCode:                         [item.hsCode, Validators.required],
       productDescription:             [item.productDescription],
       rate:                           [item.rate, Validators.required],
@@ -71,12 +79,22 @@ export class ManualEntryComponent implements OnInit {
       discount:                       [item.discount],
       saleType:                       [item.saleType, Validators.required],
       sroItemSerialNo:                [item.sroItemSerialNo],
-    }));
+    });
   }
 
   removeItem(index: number): void {
     if (this.isViewOnly) return;
+    if (this.editRequest?.index === index) this.editRequest = null;
     this.items.removeAt(index);
+  }
+
+  onEditItem(event: { item: FbrItem; index: number }): void {
+    this.editRequest = event;
+  }
+
+  onItemUpdated(event: { item: FbrItem; index: number }): void {
+    this.items.at(event.index).patchValue(event.item);
+    this.editRequest = null;
   }
 
   saveToDb(): void {
@@ -204,7 +222,7 @@ export class ManualEntryComponent implements OnInit {
     });
 
     this.items.clear();
-    (invoice.items || []).forEach(item => this.addItem(item));
+    (invoice.items || []).forEach(item => this.items.push(this.buildItemGroup(item)));
   }
 
   private buildPayload(): FbrInvoicePayload {

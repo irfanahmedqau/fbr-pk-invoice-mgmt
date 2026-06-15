@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormArray } from '@angular/forms';
+import { FbrItem } from '../../../core/models/invoice.model';
 
 @Component({
   selector: 'app-items-grid',
@@ -8,7 +9,9 @@ import { FormArray } from '@angular/forms';
 })
 export class ItemsGridComponent {
   @Input() items!: FormArray;
+  @Input() viewOnly = false;
   @Output() removeItem = new EventEmitter<number>();
+  @Output() editItem  = new EventEmitter<{ item: FbrItem; index: number }>();
 
   displayedColumns = [
     'hsCode', 'productDescription', 'rate', 'uoM', 'quantity',
@@ -16,7 +19,11 @@ export class ItemsGridComponent {
   ];
 
   get dataSource() {
-    return this.items.controls.map((c, i) => ({ ...c.value, _index: i }));
+    return this.items.controls.map((c, i) => ({ ...c.getRawValue(), _index: i }));
+  }
+
+  onEdit(index: number): void {
+    this.editItem.emit({ item: this.items.at(index).getRawValue() as FbrItem, index });
   }
 
   onRemove(index: number): void {
