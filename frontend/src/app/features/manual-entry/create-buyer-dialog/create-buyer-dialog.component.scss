@@ -1,0 +1,26 @@
+.dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 400px;
+  padding-top: 8px;
+}
+
+.full-width { width: 100%; }
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: #fce4ec;
+  color: #c62828;
+  font-size: 13px;
+}
+
+.btn-spinner {
+  display: inline-block;
+  margin-right: 6px;
+  vertical-align: middle;
+}

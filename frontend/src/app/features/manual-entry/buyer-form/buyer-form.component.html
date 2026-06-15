@@ -58,6 +58,34 @@
     <mat-error *ngIf="parentForm.get('buyerAddress')?.hasError('required')">Required</mat-error>
   </mat-form-field>
 
+  <!-- ── Business selector (multiple matches) ── -->
+  <div class="buyer-select-panel full-width" *ngIf="buyerBusinessOptions.length > 1">
+    <div class="panel-title">
+      <mat-icon>business</mat-icon> Multiple businesses found — select one to auto-fill
+    </div>
+    <div class="business-option"
+         *ngFor="let b of buyerBusinessOptions"
+         (click)="autofillBusiness(b)"
+         [class.selected]="selectedBusiness?.id === b.id">
+      <mat-icon class="biz-icon">store</mat-icon>
+      <div class="biz-detail">
+        <span class="biz-name">{{ b.businessName }}</span>
+        <span class="biz-province">{{ b.province }}</span>
+      </div>
+      <mat-icon *ngIf="selectedBusiness?.id === b.id" class="check-icon">check_circle</mat-icon>
+    </div>
+  </div>
+
+  <!-- ── Create-buyer banner (404 — not in directory) ── -->
+  <div class="create-buyer-banner full-width"
+       *ngIf="showCreateBuyerPrompt && buyerBusinessOptions.length === 0">
+    <mat-icon>person_search</mat-icon>
+    <span>Buyer not found in directory</span>
+    <button mat-stroked-button color="primary" (click)="openCreateBuyerDialog()">
+      <mat-icon>add_circle_outline</mat-icon> Add to Buyer Directory
+    </button>
+  </div>
+
   <!-- ── FBR Verification Results ── -->
   <div class="fbr-validation-panel full-width"
        *ngIf="atlResult || atlError || validatingAtl || validatingRegType">

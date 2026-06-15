@@ -1,7 +1,11 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { debounceTime, distinctUntilChanged, filter } from 'rxjs/operators';
+import { MatDialog } from '@angular/material/dialog';
 import { FbrLookupService } from '../../../core/services/fbr-lookup.service';
+import { BuyerService } from '../../../core/services/buyer.service';
+import { BuyerBusiness, BuyerProfile } from '../../../core/models/buyer.model';
+import { CreateBuyerDialogComponent } from '../create-buyer-dialog/create-buyer-dialog.component';
 
 const PROVINCES = ['PUNJAB', 'SINDH', 'KPK', 'BALOCHISTAN', 'AJK', 'GILGIT BALTISTAN', 'ISLAMABAD'];
 
@@ -33,7 +37,16 @@ export class BuyerFormComponent implements OnInit {
   regTypeResult: RegTypeResult | null = null;
   atlError:      string        | null = null;
 
-  constructor(private fbrLookup: FbrLookupService) {}
+  buyerBusinessOptions: BuyerBusiness[] = [];
+  selectedBusiness:     BuyerBusiness | null = null;
+  showCreateBuyerPrompt = false;
+  creatingBuyer = false;
+
+  constructor(
+    private fbrLookup: FbrLookupService,
+    private buyerService: BuyerService,
+    private dialog: MatDialog
+  ) {}
 
   ngOnInit(): void {
     // Registration type is always determined by FBR API — never allow manual editing
@@ -44,6 +57,13 @@ export class BuyerFormComponent implements OnInit {
       distinctUntilChanged(),
       filter(v => v && String(v).trim().length >= 5)
     ).subscribe(ntn => this.runValidation(String(ntn).trim()));
+
+    // Directory lookup — separate subscription so FBR validation is unaffected
+    this.parentForm.get('buyerNTNCNIC')?.valueChanges.pipe(
+      debounceTime(900),
+      distinctUntilChanged(),
+      filter(v => v && String(v).trim().length >= 5)
+    ).subscribe(ntn => this.lookupDirectory(String(ntn).trim()));
 
     // Reset reg type if NTN is cleared
     this.parentForm.get('buyerNTNCNIC')?.valueChanges.pipe(
@@ -112,10 +132,60 @@ export class BuyerFormComponent implements OnInit {
     ctrl?.disable({ emitEvent: false });
   }
 
+  private lookupDirectory(ntn: string): void {
+    this.showCreateBuyerPrompt = false;
+    this.buyerBusinessOptions  = [];
+    this.selectedBusiness      = null;
+
+    this.buyerService.getByNtnCnic(ntn).subscribe({
+      next: (profile) => {
+        if (profile.businesses.length === 1) {
+          this.autofillBusiness(profile.businesses[0]);
+        } else if (profile.businesses.length > 1) {
+          this.buyerBusinessOptions = profile.businesses;
+        }
+      },
+      error: (err) => {
+        if (err.status === 404) {
+          this.showCreateBuyerPrompt = true;
+        }
+        // silently ignore all other errors — do not disturb FBR flow
+      }
+    });
+  }
+
+  autofillBusiness(b: BuyerBusiness): void {
+    this.parentForm.patchValue({
+      buyerBusinessName: b.businessName,
+      buyerProvince:     b.province,
+      buyerAddress:      b.address,
+    });
+    this.selectedBusiness     = b;
+    this.buyerBusinessOptions = [];
+  }
+
+  openCreateBuyerDialog(): void {
+    const ntn = String(this.parentForm.get('buyerNTNCNIC')?.value ?? '').trim();
+    const ref = this.dialog.open(CreateBuyerDialogComponent, {
+      width: '480px',
+      data: { ntnCnic: ntn },
+    });
+    ref.afterClosed().subscribe((result: BuyerProfile | undefined) => {
+      if (result) {
+        const def = result.businesses.find(b => b.isDefault) ?? result.businesses[0];
+        if (def) this.autofillBusiness(def);
+        this.showCreateBuyerPrompt = false;
+      }
+    });
+  }
+
   private resetVerification(): void {
-    this.atlResult     = null;
-    this.regTypeResult = null;
-    this.atlError      = null;
+    this.atlResult             = null;
+    this.regTypeResult         = null;
+    this.atlError              = null;
+    this.showCreateBuyerPrompt = false;
+    this.buyerBusinessOptions  = [];
+    this.selectedBusiness      = null;
     this.parentForm.get('buyerRegistrationType')?.setValue('');
   }
 

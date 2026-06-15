@@ -70,3 +70,47 @@
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Buyer directory panels ── */
+
+.buyer-select-panel {
+  border: 1px solid #bbdefb;
+  border-radius: 8px;
+  padding: 12px 16px;
+  background: #e3f2fd;
+}
+
+.business-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover       { background: #bbdefb; }
+  &.selected    { background: #1976d2; color: #fff; .biz-province { color: #e3f2fd; } }
+}
+
+.biz-icon  { color: #1976d2; flex-shrink: 0; }
+.biz-detail { flex: 1; display: flex; flex-direction: column; }
+.biz-name   { font-weight: 600; font-size: 13px; }
+.biz-province { font-size: 12px; color: #666; }
+.check-icon { color: #fff; }
+
+.create-buyer-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  color: #5d4037;
+  font-size: 13px;
+  font-weight: 500;
+
+  mat-icon { color: #f9a825; }
+  span     { flex: 1; }
+}

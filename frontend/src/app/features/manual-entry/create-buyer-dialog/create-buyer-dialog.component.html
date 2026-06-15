@@ -1,0 +1,47 @@
+<h2 mat-dialog-title>
+  <mat-icon style="vertical-align:middle;margin-right:6px">person_add</mat-icon>
+  Add Buyer to Directory
+</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="form" class="dialog-form">
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>NTN / CNIC</mat-label>
+      <input matInput formControlName="ntnCnic">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Business Name</mat-label>
+      <input matInput formControlName="businessName" placeholder="Registered business name">
+      <mat-error *ngIf="form.get('businessName')?.hasError('required')">Required</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Province</mat-label>
+      <mat-select formControlName="province">
+        <mat-option *ngFor="let p of provinces" [value]="p">{{ p }}</mat-option>
+      </mat-select>
+      <mat-error *ngIf="form.get('province')?.hasError('required')">Required</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Address</mat-label>
+      <textarea matInput formControlName="address" rows="3"></textarea>
+    </mat-form-field>
+
+    <div *ngIf="errorMessage" class="error-banner">
+      <mat-icon>error_outline</mat-icon>
+      {{ errorMessage }}
+    </div>
+
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancel()" [disabled]="saving">Cancel</button>
+  <button mat-raised-button color="primary" (click)="submit()" [disabled]="saving">
+    <mat-spinner diameter="18" *ngIf="saving" class="btn-spinner"></mat-spinner>
+    {{ saving ? 'Saving…' : 'Save Buyer' }}
+  </button>
+</mat-dialog-actions>
