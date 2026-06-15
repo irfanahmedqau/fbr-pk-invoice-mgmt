@@ -38,4 +38,8 @@ export class InvoiceService {
   resubmitInvoice(id: number, payload: FbrInvoicePayload): Observable<any> {
     return this.http.put(`${this.base}/${id}/resubmit`, payload);
   }
+
+  downloadInvoicePdf(id: number): Observable<Blob> {
+    return this.http.get(`${this.base}/${id}/pdf`, { responseType: 'blob' });
+  }
 }

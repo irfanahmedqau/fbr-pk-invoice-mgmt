@@ -3,9 +3,12 @@ package com.fbr.invoice.upload.controller;
 import com.fbr.invoice.upload.dto.*;
 import com.fbr.invoice.upload.entity.FbrInvoiceRequest;
 import com.fbr.invoice.upload.service.InvoiceService;
+import com.fbr.invoice.upload.service.PdfService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,6 +24,9 @@ public class InvoiceController {
 
     @Autowired
     private InvoiceService invoiceService;
+
+    @Autowired
+    private PdfService pdfService;
 
     // ------------------------------------------------------------------
     // Save to local DB only
@@ -90,6 +96,19 @@ public class InvoiceController {
     @PostMapping("/{id}/post")
     public ResponseEntity<Object> postInvoiceById(@PathVariable Long id) {
         return ResponseEntity.ok(invoiceService.postInvoiceById(id));
+    }
+
+    // ------------------------------------------------------------------
+    // Download PDF for a POSTED invoice
+    // ------------------------------------------------------------------
+
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> downloadInvoicePdf(@PathVariable Long id) {
+        byte[] pdf = pdfService.generateInvoicePdf(id);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("attachment", "invoice-" + id + ".pdf");
+        return ResponseEntity.ok().headers(headers).body(pdf);
     }
 
     // ------------------------------------------------------------------

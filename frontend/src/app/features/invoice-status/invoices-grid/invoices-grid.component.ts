@@ -85,4 +85,18 @@ export class InvoicesGridComponent implements OnInit {
     };
     return map[status] ?? 'help';
   }
+
+  downloadPdf(invoice: InvoiceSummary): void {
+    this.invoiceService.downloadInvoicePdf(invoice.id).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `invoice-${invoice.invoiceRefNo}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => this.snack.open('Could not download PDF.', 'Close', { duration: 4000 })
+    });
+  }
 }

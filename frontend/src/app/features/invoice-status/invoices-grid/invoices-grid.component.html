@@ -122,6 +122,14 @@
               <mat-icon>visibility</mat-icon> View
             </button>
 
+            <!-- POSTED: download PDF -->
+            <button *ngIf="row.status === 'POSTED'"
+                    mat-icon-button
+                    (click)="downloadPdf(row)"
+                    matTooltip="Download invoice PDF">
+              <mat-icon>picture_as_pdf</mat-icon>
+            </button>
+
           </mat-cell>
         </ng-container>
 
