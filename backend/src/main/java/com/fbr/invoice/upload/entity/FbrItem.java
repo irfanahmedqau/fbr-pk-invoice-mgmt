@@ -6,6 +6,7 @@ package com.fbr.invoice.upload.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -28,6 +29,8 @@ public class FbrItem {
 	private FbrInvoiceRequest invoice;
 
 	private String hsCode;
+
+	@Column(columnDefinition = "TEXT")
 	private String productDescription;
 	private String rate;
 	private String uoM;
