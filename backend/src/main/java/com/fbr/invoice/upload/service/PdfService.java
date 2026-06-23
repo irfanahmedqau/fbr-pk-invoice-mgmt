@@ -85,7 +85,14 @@ public class PdfService {
         PdfPTable leftInner = new PdfPTable(1);
         leftInner.setWidthPercentage(100);
 
-        PdfPCell companyCell = new PdfPCell(new Phrase(inv.getSellerBusinessName(), font(22, Font.BOLDITALIC)));
+        PdfPCell companyCell;
+        try {
+            Image basfaLogo = loadClasspathImage("/static/basfa-logo.png");
+            basfaLogo.scaleToFit(160, 50);
+            companyCell = new PdfPCell(basfaLogo);
+        } catch (Exception e) {
+            companyCell = new PdfPCell(new Phrase("Basfa", font(22, Font.BOLDITALIC)));
+        }
         companyCell.setBorder(Rectangle.NO_BORDER);
         companyCell.setPaddingBottom(8);
         leftInner.addCell(companyCell);
@@ -152,11 +159,11 @@ public class PdfService {
     }
 
     private PdfPTable buildItemsTable(FbrInvoiceRequest inv) throws DocumentException {
-        PdfPTable table = new PdfPTable(6);
+        PdfPTable table = new PdfPTable(10);
         table.setWidthPercentage(100);
-        table.setWidths(new float[]{10, 15, 38, 9, 14, 14});
+        table.setWidths(new float[]{4, 10, 18, 6, 6, 12, 12, 7, 11, 14});
 
-        for (String h : new String[]{"Quantity", "Item Code", "Description", "U/M", "Price Each", "Amount"}) {
+        for (String h : new String[]{"Sr#", "Item Code", "Description", "Unit", "Qty", "Rate", "Value", "GST%", "GST", "Total"}) {
             PdfPCell cell = new PdfPCell(new Phrase(h, font(9, Font.BOLD)));
             cell.setBackgroundColor(COLOR_HEADER_BG);
             cell.setBorderColor(COLOR_BORDER);
@@ -165,74 +172,109 @@ public class PdfService {
             table.addCell(cell);
         }
 
-        List<FbrItem> items = inv.getItems();
-        if (items != null) {
-            for (FbrItem item : items) {
-                table.addCell(centerCell(formatQty(item.getQuantity())));
-                table.addCell(centerCell(item.getHsCode()));
-                table.addCell(descCell(item.getProductDescription()));
-                table.addCell(centerCell(item.getUoM()));
-                table.addCell(rightCell(item.getRate()));
-                table.addCell(rightCell(AMOUNT_FMT.format(item.getTotalValues())));
-            }
+        List<FbrItem> items = inv.getItems() != null ? inv.getItems() : List.of();
+        int sr = 1;
+        for (FbrItem item : items) {
+            double unitRate = item.getQuantity() != 0
+                    ? item.getValueSalesExcludingST() / item.getQuantity()
+                    : 0;
+
+            table.addCell(centerCell(String.valueOf(sr++)));
+            table.addCell(centerCell(item.getHsCode()));
+            table.addCell(descCell(item.getProductDescription()));
+            table.addCell(centerCell(item.getUoM()));
+            table.addCell(centerCell(formatQty(item.getQuantity())));
+            table.addCell(rightCell(AMOUNT_FMT.format(unitRate)));
+            table.addCell(rightCell(AMOUNT_FMT.format(item.getValueSalesExcludingST())));
+            table.addCell(centerCell(item.getRate()));
+            table.addCell(rightCell(AMOUNT_FMT.format(item.getSalesTaxApplicable())));
+            table.addCell(rightCell(AMOUNT_FMT.format(item.getTotalValues())));
         }
+
+        double subtotal = items.stream().mapToDouble(FbrItem::getValueSalesExcludingST).sum();
+        double salesTax = items.stream().mapToDouble(FbrItem::getSalesTaxApplicable).sum();
+        double total    = items.stream().mapToDouble(FbrItem::getTotalValues).sum();
+
+        PdfPCell totalLabel = new PdfPCell(new Phrase("Total", font(9, Font.BOLD)));
+        totalLabel.setColspan(6);
+        totalLabel.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        totalLabel.setBorderColor(COLOR_BORDER);
+        totalLabel.setPadding(4);
+        table.addCell(totalLabel);
+        table.addCell(rightCell(AMOUNT_FMT.format(subtotal)));
+        table.addCell(centerCell(""));
+        table.addCell(rightCell(AMOUNT_FMT.format(salesTax)));
+        table.addCell(rightCell(AMOUNT_FMT.format(total)));
 
         return table;
     }
 
     private PdfPTable buildFooterSection(FbrInvoiceRequest inv) throws DocumentException {
-        PdfPTable table = new PdfPTable(2);
+        // FBR invoice number + QR code + FBR logo
+        PdfPTable table = new PdfPTable(1);
         table.setWidthPercentage(100);
-        table.setWidths(new float[]{40, 60});
-
-        // Left: FBR invoice number + QR code
-        PdfPTable fbrLeft = new PdfPTable(1);
-        fbrLeft.setWidthPercentage(100);
 
         PdfPCell fbrLabel = new PdfPCell(new Phrase("FBR Invoice #", font(9, Font.BOLD)));
         fbrLabel.setBorder(Rectangle.NO_BORDER);
-        fbrLeft.addCell(fbrLabel);
+        table.addCell(fbrLabel);
 
         String fbrRef = inv.getFbrInvRefNumber() != null ? inv.getFbrInvRefNumber() : "";
         PdfPCell fbrNum = new PdfPCell(new Phrase(fbrRef, font(9, Font.BOLD)));
         fbrNum.setBorder(Rectangle.NO_BORDER);
-        fbrLeft.addCell(fbrNum);
+        table.addCell(fbrNum);
+
+        PdfPTable badgeRow = new PdfPTable(new float[]{90, 90});
+        badgeRow.setTotalWidth(190);
+        badgeRow.setLockedWidth(true);
+        badgeRow.getDefaultCell().setBorder(Rectangle.NO_BORDER);
+
+        try {
+            Image fbrLogo = loadClasspathImage("/static/fbr-logo.png");
+            fbrLogo.scaleToFit(85, 85);
+            PdfPCell logoCell = new PdfPCell(fbrLogo);
+            logoCell.setBorder(Rectangle.NO_BORDER);
+            logoCell.setPadding(2);
+            badgeRow.addCell(logoCell);
+        } catch (Exception ignored) {
+            badgeRow.addCell(emptyCell());
+        }
 
         if (!fbrRef.isBlank()) {
             try {
                 byte[] qrBytes = generateQrCode(fbrRef, 120);
                 Image qrImage = Image.getInstance(qrBytes);
-                qrImage.scaleToFit(100, 100);
+                qrImage.scaleToFit(85, 85);
                 PdfPCell qrCell = new PdfPCell(qrImage);
                 qrCell.setBorder(Rectangle.NO_BORDER);
-                qrCell.setPaddingTop(6);
-                fbrLeft.addCell(qrCell);
-            } catch (Exception ignored) {}
+                qrCell.setPadding(2);
+                badgeRow.addCell(qrCell);
+            } catch (Exception ignored) {
+                badgeRow.addCell(emptyCell());
+            }
+        } else {
+            badgeRow.addCell(emptyCell());
         }
 
-        PdfPCell leftWrapper = new PdfPCell(fbrLeft);
-        leftWrapper.setBorder(Rectangle.NO_BORDER);
-        leftWrapper.setPadding(4);
-        table.addCell(leftWrapper);
-
-        // Right: totals
-        List<FbrItem> items = inv.getItems() != null ? inv.getItems() : List.of();
-        double subtotal = items.stream().mapToDouble(FbrItem::getTotalValues).sum();
-        double salesTax = items.stream().mapToDouble(FbrItem::getSalesTaxApplicable).sum();
-        double total    = subtotal + salesTax;
-
-        PdfPTable totals = new PdfPTable(2);
-        totals.setWidthPercentage(100);
-        addTotalRow(totals, "Subtotal",  "PKR " + AMOUNT_FMT.format(subtotal), false);
-        addTotalRow(totals, "Sales Tax", "PKR " + AMOUNT_FMT.format(salesTax), false);
-        addTotalRow(totals, "Total",     "PKR " + AMOUNT_FMT.format(total),    true);
-
-        PdfPCell rightWrapper = new PdfPCell(totals);
-        rightWrapper.setBorder(Rectangle.NO_BORDER);
-        rightWrapper.setPadding(4);
-        table.addCell(rightWrapper);
+        PdfPCell badgeWrapper = new PdfPCell(badgeRow);
+        badgeWrapper.setBorder(Rectangle.NO_BORDER);
+        badgeWrapper.setPadding(0);
+        badgeWrapper.setPaddingTop(6);
+        table.addCell(badgeWrapper);
 
         return table;
+    }
+
+    private PdfPCell emptyCell() {
+        PdfPCell cell = new PdfPCell(new Phrase(""));
+        cell.setBorder(Rectangle.NO_BORDER);
+        return cell;
+    }
+
+    private Image loadClasspathImage(String path) throws Exception {
+        try (var in = getClass().getResourceAsStream(path)) {
+            if (in == null) throw new IllegalStateException("Resource not found: " + path);
+            return Image.getInstance(in.readAllBytes());
+        }
     }
 
     private PdfPTable buildBottomNote(FbrInvoiceRequest inv) throws DocumentException {
@@ -287,18 +329,20 @@ public class PdfService {
     }
 
     private PdfPCell centerCell(String text) {
-        PdfPCell cell = new PdfPCell(new Phrase(text != null ? text : "", font(9, Font.NORMAL)));
+        PdfPCell cell = new PdfPCell(new Phrase(text != null ? text : "", font(8, Font.NORMAL)));
         cell.setHorizontalAlignment(Element.ALIGN_CENTER);
         cell.setBorderColor(COLOR_BORDER);
-        cell.setPadding(4);
+        cell.setPadding(3);
+        cell.setNoWrap(true);
         return cell;
     }
 
     private PdfPCell rightCell(String text) {
-        PdfPCell cell = new PdfPCell(new Phrase(text != null ? text : "", font(9, Font.NORMAL)));
+        PdfPCell cell = new PdfPCell(new Phrase(text != null ? text : "", font(8, Font.NORMAL)));
         cell.setHorizontalAlignment(Element.ALIGN_RIGHT);
         cell.setBorderColor(COLOR_BORDER);
-        cell.setPadding(4);
+        cell.setPadding(3);
+        cell.setNoWrap(true);
         return cell;
     }
 
@@ -307,19 +351,6 @@ public class PdfService {
         cell.setBorderColor(COLOR_BORDER);
         cell.setPadding(4);
         return cell;
-    }
-
-    private void addTotalRow(PdfPTable table, String label, String value, boolean bold) {
-        int style = bold ? Font.BOLD : Font.NORMAL;
-        PdfPCell l = new PdfPCell(new Phrase(label, font(9, style)));
-        l.setBorderColor(COLOR_BORDER);
-        l.setPadding(4);
-        table.addCell(l);
-        PdfPCell v = new PdfPCell(new Phrase(value, font(9, style)));
-        v.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        v.setBorderColor(COLOR_BORDER);
-        v.setPadding(4);
-        table.addCell(v);
     }
 
     // -----------------------------------------------------------------------
